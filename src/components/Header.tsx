@@ -61,7 +61,15 @@ const Header = () => {
                   <LogOut className="h-4 w-4" />
                 </Button>
               </div>
-            ) : null}
+            ) : (
+              <Button 
+                variant="default"
+                onClick={handleAuthAction}
+                className="hidden md:flex"
+              >
+                Sign In
+              </Button>
+            )}
             
             <Button 
               variant="ghost" 
