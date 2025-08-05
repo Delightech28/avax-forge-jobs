@@ -45,8 +45,20 @@ const Auth = () => {
   const handleWalletConnect = async () => {
     const result = await connectWallet();
     if (result.success && result.address) {
-      // Here you could automatically link wallet to user profile
-      console.log('Wallet connected:', result.address);
+      // Create a wallet-based user account
+      try {
+        const { error } = await signUp(
+          `${result.address}@wallet.local`,
+          `wallet_${result.address.slice(2, 10)}`,
+          `User_${result.address.slice(2, 8)}`
+        );
+        
+        if (!error) {
+          console.log('Wallet user created successfully');
+        }
+      } catch (authError) {
+        console.error('Error creating wallet user:', authError);
+      }
     }
   };
 

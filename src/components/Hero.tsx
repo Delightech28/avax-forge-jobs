@@ -1,7 +1,24 @@
 import { Button } from "@/components/ui/button";
 import { Search, TrendingUp, Shield, Zap } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { useNavigate } from "react-router-dom";
 
 const Hero = () => {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+
+  const handleBrowseJobs = () => {
+    navigate('/jobs');
+  };
+
+  const handlePostJob = () => {
+    if (user) {
+      navigate('/post-job');
+    } else {
+      navigate('/auth');
+    }
+  };
+
   return (
     <section className="relative py-20 md:py-32 overflow-hidden">
       {/* Background Effects */}
@@ -31,11 +48,11 @@ const Hero = () => {
 
           {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center mb-16 animate-slide-up" style={{ animationDelay: '0.6s' }}>
-            <Button variant="hero" size="lg" className="text-lg px-8 py-6">
+            <Button variant="hero" size="lg" className="text-lg px-8 py-6" onClick={handleBrowseJobs}>
               <Search className="h-5 w-5 mr-2" />
               Browse Jobs
             </Button>
-            <Button variant="gradient" size="lg" className="text-lg px-8 py-6">
+            <Button variant="gradient" size="lg" className="text-lg px-8 py-6" onClick={handlePostJob}>
               <TrendingUp className="h-5 w-5 mr-2" />
               Post a Job
             </Button>

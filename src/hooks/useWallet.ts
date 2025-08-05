@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 declare global {
   interface Window {
@@ -70,14 +71,35 @@ export const useWallet = () => {
       });
 
       if (accounts.length > 0) {
-        setWalletAddress(accounts[0]);
+        const walletAddress = accounts[0];
+        setWalletAddress(walletAddress);
         setIsConnected(true);
+        
+        // Save wallet address to user profile if logged in
+        try {
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user) {
+            const { error } = await supabase
+              .from('profiles')
+              .update({ wallet_address: walletAddress })
+              .eq('user_id', user.id);
+            
+            if (error) {
+              console.error('Error updating wallet address:', error);
+            }
+          }
+        } catch (profileError) {
+          console.error('Error saving wallet address to profile:', profileError);
+        }
+        
         toast.success('Wallet connected successfully!');
-        return { success: true, address: accounts[0] };
+        return { success: true, address: walletAddress };
       }
     } catch (error: any) {
       if (error.code === 4001) {
         toast.error('Wallet connection rejected');
+      } else if (error.code === -32002) {
+        toast.error('MetaMask is already processing a connection request');
       } else {
         toast.error('Failed to connect wallet');
       }
