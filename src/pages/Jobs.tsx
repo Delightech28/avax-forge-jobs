@@ -70,15 +70,15 @@ const Jobs = () => {
         query = query.or(`title.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%`);
       }
 
-      if (jobType) {
+      if (jobType && jobType !== "all") {
         query = query.eq("job_type", jobType as any);
       }
 
-      if (locationType) {
+      if (locationType && locationType !== "all") {
         query = query.eq("location_type", locationType as any);
       }
 
-      if (experienceLevel) {
+      if (experienceLevel && experienceLevel !== "all") {
         query = query.eq("experience_level", experienceLevel as any);
       }
 
@@ -97,9 +97,9 @@ const Jobs = () => {
   const handleSearch = () => {
     const params = new URLSearchParams();
     if (searchTerm) params.set("search", searchTerm);
-    if (jobType) params.set("type", jobType);
-    if (locationType) params.set("location", locationType);
-    if (experienceLevel) params.set("experience", experienceLevel);
+    if (jobType && jobType !== "all") params.set("type", jobType);
+    if (locationType && locationType !== "all") params.set("location", locationType);
+    if (experienceLevel && experienceLevel !== "all") params.set("experience", experienceLevel);
     
     setSearchParams(params);
   };
@@ -173,7 +173,7 @@ const Jobs = () => {
                 <SelectValue placeholder="Job Type" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Types</SelectItem>
+                <SelectItem value="all">All Types</SelectItem>
                 <SelectItem value="full_time">Full Time</SelectItem>
                 <SelectItem value="part_time">Part Time</SelectItem>
                 <SelectItem value="contract">Contract</SelectItem>
@@ -187,7 +187,7 @@ const Jobs = () => {
                 <SelectValue placeholder="Location" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Locations</SelectItem>
+                <SelectItem value="all">All Locations</SelectItem>
                 <SelectItem value="remote">Remote</SelectItem>
                 <SelectItem value="on_site">On-site</SelectItem>
                 <SelectItem value="hybrid">Hybrid</SelectItem>
@@ -199,7 +199,7 @@ const Jobs = () => {
                 <SelectValue placeholder="Experience" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Levels</SelectItem>
+                <SelectItem value="all">All Levels</SelectItem>
                 <SelectItem value="entry">Entry Level</SelectItem>
                 <SelectItem value="mid">Mid Level</SelectItem>
                 <SelectItem value="senior">Senior</SelectItem>
@@ -208,14 +208,14 @@ const Jobs = () => {
               </SelectContent>
             </Select>
 
-            {(jobType || locationType || experienceLevel || searchTerm) && (
+            {(jobType && jobType !== "all" || locationType && locationType !== "all" || experienceLevel && experienceLevel !== "all" || searchTerm) && (
               <Button 
                 variant="outline" 
                 onClick={() => {
                   setSearchTerm("");
-                  setJobType("");
-                  setLocationType("");
-                  setExperienceLevel("");
+                  setJobType("all");
+                  setLocationType("all");
+                  setExperienceLevel("all");
                   setSearchParams(new URLSearchParams());
                 }}
               >
