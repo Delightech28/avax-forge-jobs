@@ -87,12 +87,7 @@ export const useAuth = () => {
         return { error };
       }
 
-      // If user is immediately confirmed (email confirmation disabled)
-      if (data.user && !data.user.email_confirmed_at) {
-        toast.success('Account created successfully! Please check your email for verification.');
-      } else {
-        toast.success('Account created and signed in successfully!');
-      }
+      toast.success('Account created and signed in successfully!');
       
       return { error: null };
     } catch (error: any) {
