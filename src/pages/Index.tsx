@@ -2,6 +2,7 @@ import Header from "@/components/Header";
 import Hero from "@/components/Hero";
 import FeaturedJobs from "@/components/FeaturedJobs";
 import Features from "@/components/Features";
+import Footer from "@/components/Footer";
 
 const Index = () => {
   return (
@@ -12,6 +13,7 @@ const Index = () => {
         <FeaturedJobs />
         <Features />
       </main>
+      <Footer />
     </div>
   );
 };
