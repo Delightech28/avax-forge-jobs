@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
-import { Search, Bell, User, LogOut } from "lucide-react";
+import { Bell, User, LogOut } from "lucide-react";
 
 const Header = () => {
   const { user, signOut } = useAuth();
@@ -27,10 +27,10 @@ const Header = () => {
 
           {/* Navigation */}
           <nav className="hidden md:flex items-center space-x-6">
-            <a href="#" className="text-foreground/80 hover:text-foreground transition-colors">
+            <a href="/jobs" className="text-foreground/80 hover:text-foreground transition-colors">
               Browse Jobs
             </a>
-            <a href="#" className="text-foreground/80 hover:text-foreground transition-colors">
+            <a href="/post-job" className="text-foreground/80 hover:text-foreground transition-colors">
               Post a Job
             </a>
             <a href="#" className="text-foreground/80 hover:text-foreground transition-colors">
@@ -41,16 +41,12 @@ const Header = () => {
           {/* Right side actions */}
           <div className="flex items-center space-x-3">
             <Button variant="ghost" size="icon" className="relative">
-              <Search className="h-4 w-4" />
-            </Button>
-            <Button variant="ghost" size="icon" className="relative">
               <Bell className="h-4 w-4" />
-              <span className="absolute -top-1 -right-1 w-2 h-2 bg-primary rounded-full"></span>
             </Button>
             
             {user ? (
               <div className="flex items-center space-x-2">
-                <Avatar className="h-8 w-8">
+                <Avatar className="h-8 w-8 cursor-pointer" onClick={() => navigate('/profile')}>
                   <AvatarImage src={user.profile?.avatar_url} />
                   <AvatarFallback>
                     {user.profile?.full_name?.charAt(0) || user.email?.charAt(0) || 'U'}
