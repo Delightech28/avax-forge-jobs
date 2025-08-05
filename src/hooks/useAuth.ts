@@ -72,13 +72,10 @@ export const useAuth = () => {
 
   const signUp = async (email: string, password: string, fullName?: string) => {
     try {
-      const redirectUrl = `${window.location.origin}/`;
-      
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          emailRedirectTo: redirectUrl,
           data: {
             full_name: fullName
           }
@@ -90,7 +87,13 @@ export const useAuth = () => {
         return { error };
       }
 
-      toast.success('Check your email for verification link');
+      // If user is immediately confirmed (email confirmation disabled)
+      if (data.user && !data.user.email_confirmed_at) {
+        toast.success('Account created successfully! Please check your email for verification.');
+      } else {
+        toast.success('Account created and signed in successfully!');
+      }
+      
       return { error: null };
     } catch (error: any) {
       toast.error('An unexpected error occurred');
@@ -162,6 +165,45 @@ export const useAuth = () => {
     }
   };
 
+  const signInWithWallet = async (walletAddress: string) => {
+    try {
+      // Create a wallet-based user account
+      const { data, error } = await supabase.auth.signUp({
+        email: `${walletAddress.toLowerCase()}@wallet.temp`,
+        password: `wallet_${walletAddress.slice(2, 18)}`,
+        options: {
+          data: {
+            full_name: `User_${walletAddress.slice(2, 8)}`,
+            is_wallet_user: true,
+            wallet_address: walletAddress
+          }
+        }
+      });
+
+      if (error && error.message?.includes('already registered')) {
+        // Try to sign in instead
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email: `${walletAddress.toLowerCase()}@wallet.temp`,
+          password: `wallet_${walletAddress.slice(2, 18)}`
+        });
+        
+        if (signInError) {
+          toast.error('Failed to authenticate with wallet');
+          return { error: signInError };
+        }
+      } else if (error) {
+        toast.error('Failed to create wallet account');
+        return { error };
+      }
+
+      toast.success('Wallet authenticated successfully!');
+      return { error: null };
+    } catch (error: any) {
+      toast.error('Wallet authentication failed');
+      return { error };
+    }
+  };
+
   return {
     user,
     session,
@@ -169,6 +211,7 @@ export const useAuth = () => {
     signUp,
     signIn,
     signOut,
-    updateProfile
+    updateProfile,
+    signInWithWallet
   };
 };

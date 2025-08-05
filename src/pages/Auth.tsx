@@ -17,7 +17,7 @@ const Auth = () => {
   const [fullName, setFullName] = useState('');
   const [loading, setLoading] = useState(false);
   
-  const { user, signIn, signUp } = useAuth();
+  const { user, signIn, signUp, signInWithWallet } = useAuth();
   const { connectWallet, isConnected, walletAddress, isConnecting } = useWallet();
   const navigate = useNavigate();
 
@@ -46,8 +46,9 @@ const Auth = () => {
     try {
       const result = await connectWallet();
       if (result.success && result.address) {
-        // Wallet connected successfully - redirect to main page
-        navigate('/');
+        // Authenticate user with wallet address
+        await signInWithWallet(result.address);
+        // Navigation will happen automatically via useEffect when user state changes
       }
     } catch (error) {
       console.error('Error connecting wallet:', error);
