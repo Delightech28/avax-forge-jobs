@@ -167,11 +167,23 @@ export const useAuth = () => {
 
   const signInWithWallet = async (walletAddress: string) => {
     try {
-      // Create a wallet-based user account
-      const { data, error } = await supabase.auth.signUp({
+      // First try to sign in with existing wallet account
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: `${walletAddress.toLowerCase()}@wallet.temp`,
+        password: `wallet_${walletAddress.slice(2, 18)}`
+      });
+
+      if (!signInError) {
+        toast.success('Welcome back!');
+        return { error: null };
+      }
+
+      // If sign in fails, create a new account
+      const { data, error: signUpError } = await supabase.auth.signUp({
         email: `${walletAddress.toLowerCase()}@wallet.temp`,
         password: `wallet_${walletAddress.slice(2, 18)}`,
         options: {
+          emailRedirectTo: `${window.location.origin}/`,
           data: {
             full_name: `User_${walletAddress.slice(2, 8)}`,
             is_wallet_user: true,
@@ -180,25 +192,27 @@ export const useAuth = () => {
         }
       });
 
-      if (error && error.message?.includes('already registered')) {
-        // Try to sign in instead
-        const { error: signInError } = await supabase.auth.signInWithPassword({
-          email: `${walletAddress.toLowerCase()}@wallet.temp`,
-          password: `wallet_${walletAddress.slice(2, 18)}`
-        });
-        
-        if (signInError) {
-          toast.error('Failed to authenticate with wallet');
-          return { error: signInError };
-        }
-      } else if (error) {
-        toast.error('Failed to create wallet account');
-        return { error };
+      if (signUpError) {
+        console.error('Wallet sign up error:', signUpError);
+        toast.error(`Authentication failed: ${signUpError.message}`);
+        return { error: signUpError };
+      }
+
+      // Check if user needs email confirmation
+      if (data.user && !data.user.email_confirmed_at && data.session) {
+        // User is immediately signed in (email confirmation disabled)
+        toast.success('Wallet authenticated successfully!');
+        return { error: null };
+      } else if (data.user && !data.user.email_confirmed_at) {
+        // Email confirmation is required
+        toast.error('Email confirmation is required. Please disable email confirmation in Supabase settings for wallet authentication.');
+        return { error: new Error('Email confirmation required') };
       }
 
       toast.success('Wallet authenticated successfully!');
       return { error: null };
     } catch (error: any) {
+      console.error('Wallet authentication error:', error);
       toast.error('Wallet authentication failed');
       return { error };
     }
