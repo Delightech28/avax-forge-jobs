@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+// Using Express API instead of Supabase
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -58,27 +58,39 @@ const JobDetail = () => {
 
   const fetchJob = async () => {
     try {
-      const { data, error } = await supabase
-        .from("jobs")
-        .select(`
-          *,
-          companies:company_id (
-            id,
-            name,
-            description,
-            logo_url,
-            website_url,
-            location,
-            size_range,
-            industry
-          )
-        `)
-        .eq("id", id)
-        .eq("is_active", true)
-        .single();
-
-      if (error) throw error;
-      setJob(data);
+      const res = await fetch(`/api/jobs/${id}`);
+      if (!res.ok) throw new Error('Not found');
+      const body = await res.json();
+      const j = body.job;
+      setJob({
+        id: j._id,
+        title: j.title,
+        description: j.description,
+        job_type: j.jobType,
+        location_type: j.locationType,
+        location: j.location,
+        salary_min: j.salaryMin,
+        salary_max: j.salaryMax,
+        salary_currency: j.salaryCurrency,
+        experience_level: j.experienceLevel,
+        skills: j.skills || [],
+        requirements: '',
+        benefits: '',
+        token_compensation: j.tokenCompensation,
+        token_amount: j.tokenAmount,
+        requires_wallet: j.requiresWallet,
+        created_at: j.createdAt,
+        companies: j.company ? {
+          id: j.company._id,
+          name: j.company.name,
+          description: j.company.description,
+          logo_url: j.company.logoUrl,
+          website_url: j.company.websiteUrl,
+          location: j.company.location,
+          size_range: j.company.sizeRange,
+          industry: j.company.industry,
+        } : (undefined as any)
+      });
     } catch (error) {
       console.error("Error fetching job:", error);
       toast.error("Job not found");
@@ -90,21 +102,11 @@ const JobDetail = () => {
 
   const checkApplicationStatus = async () => {
     if (!user || !id) return;
-
     try {
-      const { data, error } = await supabase
-        .from("job_applications")
-        .select("id")
-        .eq("job_id", id)
-        .eq("applicant_id", user.id)
-        .single();
-
-      if (data) {
-        setHasApplied(true);
-      }
-    } catch (error) {
-      // No application found, which is fine
-    }
+      const res = await fetch(`/api/jobs/${id}/application-status`, { credentials: 'include' });
+      const body = await res.json();
+      if (body.hasApplied) setHasApplied(true);
+    } catch {}
   };
 
   const handleApply = async () => {
@@ -116,23 +118,17 @@ const JobDetail = () => {
 
     setApplying(true);
     try {
-      const { error } = await supabase
-        .from("job_applications")
-        .insert({
-          job_id: id,
-          applicant_id: user.id,
-        });
-
-      if (error) throw error;
-      setHasApplied(true);
-      toast.success("Application submitted successfully!");
-    } catch (error: any) {
-      if (error.code === "23505") {
-        toast.error("You have already applied for this job");
+      const res = await fetch(`/api/jobs/${id}/apply`, { method: 'POST', credentials: 'include' });
+      if (res.status === 409) {
+        toast.error('You have already applied for this job');
         setHasApplied(true);
-      } else {
-        toast.error("Failed to submit application");
+        return;
       }
+      if (!res.ok) throw new Error('Failed');
+      setHasApplied(true);
+      toast.success('Application submitted successfully!');
+    } catch (error: any) {
+      toast.error('Failed to submit application');
     } finally {
       setApplying(false);
     }
@@ -145,21 +141,15 @@ const JobDetail = () => {
     }
 
     try {
-      const { error } = await supabase
-        .from("saved_jobs")
-        .insert({
-          job_id: id,
-          user_id: user.id
-        });
-
-      if (error) throw error;
-      toast.success("Job saved successfully!");
-    } catch (error: any) {
-      if (error.code === "23505") {
-        toast.error("Job already saved");
-      } else {
-        toast.error("Failed to save job");
+      const res = await fetch(`/api/jobs/${id}/save`, { method: 'POST', credentials: 'include' });
+      if (res.status === 409) {
+        toast.error('Job already saved');
+        return;
       }
+      if (!res.ok) throw new Error('Failed');
+      toast.success('Job saved successfully!');
+    } catch (error: any) {
+      toast.error('Failed to save job');
     }
   };
 

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+// Using Express API instead of Supabase
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -52,40 +52,31 @@ const Jobs = () => {
   const fetchJobs = async () => {
     setLoading(true);
     try {
-      let query = supabase
-        .from("jobs")
-        .select(`
-          *,
-          companies:company_id (
-            id,
-            name,
-            logo_url,
-            location
-          )
-        `)
-        .eq("is_active", true)
-        .order("created_at", { ascending: false });
-
-      if (searchTerm) {
-        query = query.or(`title.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%`);
-      }
-
-      if (jobType && jobType !== "all") {
-        query = query.eq("job_type", jobType as any);
-      }
-
-      if (locationType && locationType !== "all") {
-        query = query.eq("location_type", locationType as any);
-      }
-
-      if (experienceLevel && experienceLevel !== "all") {
-        query = query.eq("experience_level", experienceLevel as any);
-      }
-
-      const { data, error } = await query;
-
-      if (error) throw error;
-      setJobs(data || []);
+      const params = new URLSearchParams();
+      if (searchTerm) params.set('search', searchTerm);
+      if (jobType && jobType !== 'all') params.set('type', jobType);
+      if (locationType && locationType !== 'all') params.set('location', locationType);
+      if (experienceLevel && experienceLevel !== 'all') params.set('experience', experienceLevel);
+      const res = await fetch(`/api/jobs?${params.toString()}`);
+      const body = await res.json();
+      setJobs((body.jobs || []).map((j: any) => ({
+        id: j._id,
+        title: j.title,
+        description: j.description,
+        job_type: j.jobType,
+        location_type: j.locationType,
+        location: j.location,
+        salary_min: j.salaryMin,
+        salary_max: j.salaryMax,
+        salary_currency: j.salaryCurrency,
+        experience_level: j.experienceLevel,
+        skills: j.skills || [],
+        token_compensation: j.tokenCompensation,
+        token_amount: j.tokenAmount,
+        requires_wallet: j.requiresWallet,
+        created_at: j.createdAt,
+        companies: j.company ? { id: j.company._id, name: j.company.name, logo_url: j.company.logoUrl, location: j.company.location } : undefined,
+      })));
     } catch (error) {
       console.error("Error fetching jobs:", error);
       toast.error("Failed to fetch jobs");
@@ -111,14 +102,12 @@ const Jobs = () => {
     }
 
     try {
-      const { error } = await supabase
-        .from("saved_jobs")
-        .insert({
-          job_id: jobId,
-          user_id: user.id
-        });
-
-      if (error) throw error;
+      const res = await fetch(`/api/jobs/${jobId}/save`, { method: 'POST', credentials: 'include' });
+      if (!res.ok) {
+        const body = await res.json();
+        if (res.status === 409) throw { code: '23505' };
+        throw new Error(body.error || 'Failed to save job');
+      }
       toast.success("Job saved successfully!");
     } catch (error: any) {
       if (error.code === "23505") {

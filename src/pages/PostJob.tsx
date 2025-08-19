@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+// Using Express API instead of Supabase
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -56,14 +56,9 @@ const PostJob = () => {
 
   const fetchCompanies = async () => {
     try {
-      const { data, error } = await supabase
-        .from("companies")
-        .select("id, name")
-        .eq("created_by", user?.id)
-        .order("name");
-
-      if (error) throw error;
-      setCompanies(data || []);
+      const res = await fetch('/api/companies', { credentials: 'include' });
+      const body = await res.json();
+      setCompanies((body.companies || []).map((c: any) => ({ id: c._id || c.id, name: c.name })));
     } catch (error) {
       console.error("Error fetching companies:", error);
     }
@@ -107,16 +102,16 @@ const PostJob = () => {
         expires_at: formData.expires_at ? new Date(formData.expires_at).toISOString() : null,
       } as any;
 
-      const { data, error } = await supabase
-        .from("jobs")
-        .insert(jobData)
-        .select()
-        .single();
-
-      if (error) throw error;
-
+      const res = await fetch('/api/jobs', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(jobData),
+      });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.error || 'Failed');
       toast.success("Job posted successfully!");
-      navigate(`/jobs/${data.id}`);
+      navigate(`/jobs/${body.job._id}`);
     } catch (error) {
       console.error("Error posting job:", error);
       toast.error("Failed to post job");

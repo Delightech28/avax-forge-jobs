@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
-import { supabase } from '@/integrations/supabase/client';
+// Supabase removed for Express backend. Keep wallet-only logic here.
 
 declare global {
   interface Window {
@@ -75,22 +75,7 @@ export const useWallet = () => {
         setWalletAddress(walletAddress);
         setIsConnected(true);
         
-        // Save wallet address to user profile if logged in
-        try {
-          const { data: { user } } = await supabase.auth.getUser();
-          if (user) {
-            const { error } = await supabase
-              .from('profiles')
-              .update({ wallet_address: walletAddress })
-              .eq('user_id', user.id);
-            
-            if (error) {
-              console.error('Error updating wallet address:', error);
-            }
-          }
-        } catch (profileError) {
-          console.error('Error saving wallet address to profile:', profileError);
-        }
+        // Optionally send wallet to backend after login in future
         
         toast.success('Wallet connected successfully!');
         return { success: true, address: walletAddress };

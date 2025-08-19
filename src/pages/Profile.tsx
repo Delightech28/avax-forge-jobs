@@ -7,9 +7,9 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { Wallet, User, Mail, MapPin, Calendar, Edit2 } from 'lucide-react';
+import { Wallet, User, Mail, Calendar, Edit2, MapPin, ExternalLink } from 'lucide-react';
+import { api } from '@/lib/api';
 import { toast } from 'sonner';
 import Header from '@/components/Header';
 
@@ -19,21 +19,24 @@ const Profile = () => {
   
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
-    full_name: '',
-    username: '',
+    fullName: '',
     bio: '',
     location: '',
-    website_url: '',
+    websiteUrl: '',
+    avatarUrl: '',
   });
+  const [locQuery, setLocQuery] = useState('');
+  const [locResults, setLocResults] = useState<{ label: string }[]>([]);
+  const [locLoading, setLocLoading] = useState(false);
 
   useEffect(() => {
-    if (user?.profile) {
+    if (user) {
       setFormData({
-        full_name: user.profile.full_name || '',
-        username: user.profile.username || '',
-        bio: user.profile.bio || '',
-        location: user.profile.location || '',
-        website_url: user.profile.website_url || '',
+        fullName: user.fullName || '',
+        bio: (user as any).bio || '',
+        location: (user as any).location || '',
+        websiteUrl: (user as any).websiteUrl || '',
+        avatarUrl: (user as any).avatarUrl || '',
       });
     }
   }, [user]);
@@ -44,6 +47,44 @@ const Profile = () => {
       setIsEditing(false);
     }
   };
+
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0) return;
+    const file = e.target.files[0];
+    const fd = new FormData();
+    fd.append('avatar', file);
+    try {
+      const res = await fetch(api('/api/profile/avatar'), {
+        method: 'POST',
+        credentials: 'include',
+        body: fd,
+      });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.error || 'Upload failed');
+      setFormData(prev => ({ ...prev, avatarUrl: body.avatarUrl }));
+      toast.success('Avatar updated');
+    } catch (err) {
+      toast.error('Failed to upload avatar');
+    }
+  };
+
+  useEffect(() => {
+    const q = locQuery.trim();
+    if (!isEditing || q.length < 2) { setLocResults([]); return; }
+    const t = setTimeout(async () => {
+      try {
+        setLocLoading(true);
+        const res = await fetch(api(`/api/locations/search?q=${encodeURIComponent(q)}`));
+        const body = await res.json();
+        setLocResults((body.results || []).slice(0, 8));
+      } catch {
+        setLocResults([]);
+      } finally {
+        setLocLoading(false);
+      }
+    }, 250);
+    return () => clearTimeout(t);
+  }, [locQuery, isEditing]);
 
   const handleWalletConnect = async () => {
     const result = await connectWallet();
@@ -61,9 +102,8 @@ const Profile = () => {
   }
 
   // Check if user signed up with wallet (no email) or email
-  const signedUpWithWallet = !user.email;
-  const needsNameSetup = signedUpWithWallet && !user.profile?.full_name;
-  const needsWalletConnection = !signedUpWithWallet && !isConnected;
+  const needsNameSetup = !user.fullName;
+  const needsWalletConnection = !isConnected;
 
   return (
     <div className="min-h-screen bg-background">
@@ -77,22 +117,20 @@ const Profile = () => {
             <Card>
               <CardHeader className="text-center">
                 <Avatar className="w-24 h-24 mx-auto mb-4">
-                  <AvatarImage src={user.profile?.avatar_url} />
+                  <AvatarImage src={formData.avatarUrl || ''} />
                   <AvatarFallback className="text-2xl">
-                    {user.profile?.full_name?.charAt(0) || user.email?.charAt(0) || 'U'}
+                    {user.fullName?.charAt(0) || user.email?.charAt(0) || 'U'}
                   </AvatarFallback>
                 </Avatar>
                 <CardTitle className="text-xl">
-                  {user.profile?.full_name || user.email?.split('@')[0] || 'Anonymous User'}
+                  {user.fullName || user.email?.split('@')[0] || 'Anonymous User'}
                 </CardTitle>
-                <CardDescription>
-                  {user.profile?.username && `@${user.profile.username}`}
-                </CardDescription>
+                <CardDescription />
               </CardHeader>
               
               <CardContent className="space-y-4">
-                {user.profile?.bio && (
-                  <p className="text-sm text-muted-foreground">{user.profile.bio}</p>
+                {formData.bio && (
+                  <p className="text-sm text-muted-foreground">{formData.bio}</p>
                 )}
                 
                 <div className="space-y-2 text-sm">
@@ -103,16 +141,16 @@ const Profile = () => {
                     </div>
                   )}
                   
-                  {user.profile?.location && (
+                  {formData.location && (
                     <div className="flex items-center gap-2">
                       <MapPin className="h-4 w-4" />
-                      <span>{user.profile.location}</span>
+                      <span>{formData.location}</span>
                     </div>
                   )}
                   
                   <div className="flex items-center gap-2">
                     <Calendar className="h-4 w-4" />
-                    <span>Joined {new Date(user.created_at || '').toLocaleDateString()}</span>
+                    <span>Joined {new Date((user as any).createdAt || '').toLocaleDateString()}</span>
                   </div>
                 </div>
 
@@ -208,44 +246,61 @@ const Profile = () => {
                     {isEditing ? (
                       <Input
                         id="full_name"
-                        value={formData.full_name}
-                        onChange={(e) => setFormData(prev => ({ ...prev, full_name: e.target.value }))}
+                        value={formData.fullName}
+                        onChange={(e) => setFormData(prev => ({ ...prev, fullName: e.target.value }))}
                         placeholder="Enter your full name"
                       />
                     ) : (
                       <p className="py-2 px-3 bg-muted rounded-md">
-                        {formData.full_name || 'Not set'}
+                        {formData.fullName || 'Not set'}
                       </p>
                     )}
                   </div>
                   
-                  <div className="space-y-2">
-                    <Label htmlFor="username">Username</Label>
-                    {isEditing ? (
-                      <Input
-                        id="username"
-                        value={formData.username}
-                        onChange={(e) => setFormData(prev => ({ ...prev, username: e.target.value }))}
-                        placeholder="Enter your username"
-                      />
-                    ) : (
-                      <p className="py-2 px-3 bg-muted rounded-md">
-                        {formData.username || 'Not set'}
-                      </p>
-                    )}
-                  </div>
+                  {formData.websiteUrl && (
+                    <div className="text-sm">
+                      <a href={formData.websiteUrl} target="_blank" rel="noreferrer" className="text-primary underline break-all">{formData.websiteUrl}</a>
+                    </div>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="location">Location</Label>
                     {isEditing ? (
-                      <Input
-                        id="location"
-                        value={formData.location}
-                        onChange={(e) => setFormData(prev => ({ ...prev, location: e.target.value }))}
-                        placeholder="Enter your location"
-                      />
+                      <div className="relative">
+                        <Input
+                          id="location"
+                          value={formData.location}
+                          onChange={(e) => setFormData(prev => ({ ...prev, location: e.target.value }))}
+                          placeholder="Enter your location"
+                        />
+                        <div className="mt-2">
+                          <Input
+                            id="loc_autocomplete"
+                            value={locQuery}
+                            onChange={(e) => setLocQuery(e.target.value)}
+                            placeholder="Type to search worldwide..."
+                          />
+                          {locLoading && (
+                            <div className="text-xs text-muted-foreground mt-1">Searching...</div>
+                          )}
+                          {locResults.length > 0 && (
+                            <div className="mt-1 border rounded">
+                              {locResults.map((r, i) => (
+                                <button
+                                  key={i}
+                                  type="button"
+                                  className="w-full text-left px-3 py-2 hover:bg-accent"
+                                  onClick={() => { setFormData(prev => ({ ...prev, location: r.label })); setLocResults([]); setLocQuery(''); }}
+                                >
+                                  {r.label}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     ) : (
                       <p className="py-2 px-3 bg-muted rounded-md">
                         {formData.location || 'Not set'}
@@ -258,32 +313,34 @@ const Profile = () => {
                     {isEditing ? (
                       <Input
                         id="website_url"
-                        value={formData.website_url}
-                        onChange={(e) => setFormData(prev => ({ ...prev, website_url: e.target.value }))}
+                        value={formData.websiteUrl}
+                        onChange={(e) => setFormData(prev => ({ ...prev, websiteUrl: e.target.value }))}
                         placeholder="Enter your website URL"
                       />
                     ) : (
-                      <p className="py-2 px-3 bg-muted rounded-md">
-                        {formData.website_url || 'Not set'}
+                      <p className="py-2 px-3 bg-muted rounded-md break-all flex items-center gap-2">
+                        {formData.websiteUrl ? (
+                          <>
+                            <ExternalLink className="h-4 w-4" />
+                            <a href={formData.websiteUrl} target="_blank" rel="noreferrer" className="underline">{formData.websiteUrl}</a>
+                          </>
+                        ) : 'Not set'}
                       </p>
                     )}
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="bio">Bio</Label>
+                  <Label htmlFor="avatar_url">Avatar</Label>
                   {isEditing ? (
-                    <Textarea
-                      id="bio"
-                      value={formData.bio}
-                      onChange={(e) => setFormData(prev => ({ ...prev, bio: e.target.value }))}
-                      placeholder="Tell us about yourself..."
-                      rows={4}
-                    />
-                  ) : (
-                    <div className="py-2 px-3 bg-muted rounded-md min-h-[100px]">
-                      {formData.bio || 'No bio set'}
+                    <div className="flex items-center gap-3">
+                      <Input id="avatar_url" type="file" accept="image/*" onChange={handleAvatarChange} />
+                      {formData.avatarUrl && <a href={formData.avatarUrl} target="_blank" rel="noreferrer" className="text-sm underline">Preview</a>}
                     </div>
+                  ) : (
+                    <p className="py-2 px-3 bg-muted rounded-md break-all">
+                      {formData.avatarUrl ? 'Uploaded' : 'Not set'}
+                    </p>
                   )}
                 </div>
 

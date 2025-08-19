@@ -36,6 +36,26 @@ npm i
 npm run dev
 ```
 
+## Environment configuration
+
+Create a `.env.local` file in the project root with your Supabase credentials:
+
+```
+VITE_SUPABASE_URL=your-project-url
+VITE_SUPABASE_ANON_KEY=your-anon-key
+```
+
+Ensure these match the Supabase project you intend to use. The app will warn if these are missing and fall back to the generated demo credentials.
+
+For the optional Express + MongoDB backend, add a `.env` file (server reads this):
+
+```
+PORT=4000
+MONGODB_URI=mongodb://localhost:27017/avax_forge_jobs
+JWT_SECRET=change_me
+CORS_ORIGIN=http://localhost:8080
+```
+
 **Edit a file directly in GitHub**
 
 - Navigate to the desired file(s).
