@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
+import { api } from '@/lib/api';
 type Session = null;
 
 export interface AuthUser {
@@ -19,7 +20,7 @@ export const useAuth = () => {
   useEffect(() => {
     const loadMe = async () => {
       try {
-        const res = await fetch((window as any).API_BASE ? (window as any).API_BASE + '/api/auth/me' : '/api/auth/me', { credentials: 'include' });
+        const res = await fetch(api('/api/auth/me'), { credentials: 'include' });
         const body = await res.json();
         setUser(body.user || null);
       } catch (e) {
@@ -33,7 +34,7 @@ export const useAuth = () => {
 
   const signUp = async (email: string, password: string, fullName?: string) => {
     try {
-      const res = await fetch((window as any).API_BASE ? (window as any).API_BASE + '/api/auth/signup' : '/api/auth/signup', {
+      const res = await fetch(api('/api/auth/signup'), {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
@@ -56,7 +57,7 @@ export const useAuth = () => {
 
   const signIn = async (email: string, password: string) => {
     try {
-      const res = await fetch((window as any).API_BASE ? (window as any).API_BASE + '/api/auth/login' : '/api/auth/login', {
+      const res = await fetch(api('/api/auth/login'), {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
@@ -78,7 +79,7 @@ export const useAuth = () => {
 
   const signOut = async () => {
     try {
-      await fetch((window as any).API_BASE ? (window as any).API_BASE + '/api/auth/logout' : '/api/auth/logout', { method: 'POST', credentials: 'include' });
+      await fetch(api('/api/auth/logout'), { method: 'POST', credentials: 'include' });
       setUser(null);
       toast.success('Signed out successfully');
       return { error: null };
@@ -91,7 +92,7 @@ export const useAuth = () => {
   const updateProfile = async (updates: Partial<Pick<AuthUser, 'fullName' | 'walletAddress'> & { bio: string; location: string; websiteUrl: string; avatarUrl: string }>) => {
     if (!user) return { error: new Error('No user logged in') };
     try {
-      const res = await fetch((window as any).API_BASE ? (window as any).API_BASE + '/api/profile' : '/api/profile', {
+      const res = await fetch(api('/api/profile'), {
         method: 'PUT',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
@@ -119,13 +120,13 @@ export const useAuth = () => {
       const address = (accounts[0] || '').toLowerCase();
       if (!address) return { error: new Error('No account') };
 
-      const nonceRes = await fetch(((window as any).API_BASE ? (window as any).API_BASE : '') + `/api/auth/wallet/nonce?address=${encodeURIComponent(address)}`, { credentials: 'include' });
+      const nonceRes = await fetch(api(`/api/auth/wallet/nonce?address=${encodeURIComponent(address)}`), { credentials: 'include' });
       const { nonce } = await nonceRes.json();
       if (!nonce) return { error: new Error('Failed to get nonce') };
 
       const signature = await provider.request({ method: 'personal_sign', params: [nonce, address] });
 
-      const verifyRes = await fetch((window as any).API_BASE ? (window as any).API_BASE + '/api/auth/wallet/verify' : '/api/auth/wallet/verify', {
+      const verifyRes = await fetch(api('/api/auth/wallet/verify'), {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
