@@ -57,6 +57,7 @@
     "multer": "^1.4.5-lts.1",
     "input-otp": "^1.4.2",
     "jsonwebtoken": "^9.0.2",
+    "firebase": "^10.14.0",
     "lucide-react": "^0.462.0",
     "mongodb": "^6.18.0",
     "mongoose": "^8.8.2",

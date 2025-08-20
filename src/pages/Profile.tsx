@@ -9,7 +9,10 @@ import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Wallet, User, Mail, Calendar, Edit2, MapPin, ExternalLink } from 'lucide-react';
-import { api } from '@/lib/api';
+import { storage } from '@/integrations/firebase/client';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { db } from '@/integrations/firebase/client';
+import { collection, query, where, limit, getDocs } from 'firebase/firestore';
 import { toast } from 'sonner';
 import Header from '@/components/Header';
 
@@ -51,18 +54,13 @@ const Profile = () => {
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0) return;
     const file = e.target.files[0];
-    const fd = new FormData();
-    fd.append('avatar', file);
     try {
-      const res = await fetch(api('/api/profile/avatar'), {
-        method: 'POST',
-        credentials: 'include',
-        body: fd,
-      });
-      const body = await res.json();
-      if (!res.ok) throw new Error(body.error || 'Upload failed');
-      setFormData(prev => ({ ...prev, avatarUrl: body.avatarUrl }));
-      toast.success('Avatar updated');
+      if (!user) return;
+      const storageRef = ref(storage, `avatars/${user.id}/${file.name}`);
+      await uploadBytes(storageRef, file);
+      const url = await getDownloadURL(storageRef);
+      setFormData(prev => ({ ...prev, avatarUrl: url }));
+      toast.success('Avatar uploaded');
     } catch (err) {
       toast.error('Failed to upload avatar');
     }
@@ -74,9 +72,16 @@ const Profile = () => {
     const t = setTimeout(async () => {
       try {
         setLocLoading(true);
-        const res = await fetch(api(`/api/locations/search?q=${encodeURIComponent(q)}`));
-        const body = await res.json();
-        setLocResults((body.results || []).slice(0, 8));
+        // Simple demo: search cities collection if you add one; otherwise just echo the query
+        try {
+          const citiesCol = collection(db, 'locations');
+          const qy = query(citiesCol, where('label', '>=', q), where('label', '<=', q + '\uf8ff'), limit(8));
+          const snap = await getDocs(qy);
+          const results = snap.docs.map(d => ({ label: (d.data() as any).label as string }));
+          setLocResults(results);
+        } catch {
+          setLocResults([]);
+        }
       } catch {
         setLocResults([]);
       } finally {

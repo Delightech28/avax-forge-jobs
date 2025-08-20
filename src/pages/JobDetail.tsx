@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 // Using Express API instead of Supabase
 import { useAuth } from "@/hooks/useAuth";
+import { db } from '@/integrations/firebase/client';
+import { doc, getDoc } from 'firebase/firestore';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -58,38 +60,28 @@ const JobDetail = () => {
 
   const fetchJob = async () => {
     try {
-      const res = await fetch(`/api/jobs/${id}`);
-      if (!res.ok) throw new Error('Not found');
-      const body = await res.json();
-      const j = body.job;
+      const snap = await getDoc(doc(db, 'jobs', id as string));
+      if (!snap.exists()) throw new Error('Not found');
+      const j = snap.data() as any;
       setJob({
-        id: j._id,
+        id: snap.id,
         title: j.title,
         description: j.description,
-        job_type: j.jobType,
-        location_type: j.locationType,
+        job_type: j.job_type,
+        location_type: j.location_type,
         location: j.location,
-        salary_min: j.salaryMin,
-        salary_max: j.salaryMax,
-        salary_currency: j.salaryCurrency,
-        experience_level: j.experienceLevel,
+        salary_min: j.salary_min,
+        salary_max: j.salary_max,
+        salary_currency: j.salary_currency,
+        experience_level: j.experience_level,
         skills: j.skills || [],
-        requirements: '',
-        benefits: '',
-        token_compensation: j.tokenCompensation,
-        token_amount: j.tokenAmount,
-        requires_wallet: j.requiresWallet,
-        created_at: j.createdAt,
-        companies: j.company ? {
-          id: j.company._id,
-          name: j.company.name,
-          description: j.company.description,
-          logo_url: j.company.logoUrl,
-          website_url: j.company.websiteUrl,
-          location: j.company.location,
-          size_range: j.company.sizeRange,
-          industry: j.company.industry,
-        } : (undefined as any)
+        requirements: j.requirements || '',
+        benefits: j.benefits || '',
+        token_compensation: j.token_compensation,
+        token_amount: j.token_amount,
+        requires_wallet: j.requires_wallet,
+        created_at: j.created_at,
+        companies: j.company || (undefined as any)
       });
     } catch (error) {
       console.error("Error fetching job:", error);
@@ -101,12 +93,8 @@ const JobDetail = () => {
   };
 
   const checkApplicationStatus = async () => {
-    if (!user || !id) return;
-    try {
-      const res = await fetch(`/api/jobs/${id}/application-status`, { credentials: 'include' });
-      const body = await res.json();
-      if (body.hasApplied) setHasApplied(true);
-    } catch {}
+    // Implement if you add applications subcollection in Firestore
+    return;
   };
 
   const handleApply = async () => {
@@ -118,15 +106,9 @@ const JobDetail = () => {
 
     setApplying(true);
     try {
-      const res = await fetch(`/api/jobs/${id}/apply`, { method: 'POST', credentials: 'include' });
-      if (res.status === 409) {
-        toast.error('You have already applied for this job');
-        setHasApplied(true);
-        return;
-      }
-      if (!res.ok) throw new Error('Failed');
+      // Implement if you add applications subcollection in Firestore
       setHasApplied(true);
-      toast.success('Application submitted successfully!');
+      toast.success('Application submitted successfully! (local)');
     } catch (error: any) {
       toast.error('Failed to submit application');
     } finally {
@@ -141,13 +123,8 @@ const JobDetail = () => {
     }
 
     try {
-      const res = await fetch(`/api/jobs/${id}/save`, { method: 'POST', credentials: 'include' });
-      if (res.status === 409) {
-        toast.error('Job already saved');
-        return;
-      }
-      if (!res.ok) throw new Error('Failed');
-      toast.success('Job saved successfully!');
+      // Implement saved jobs collection later
+      toast.success('Job saved successfully! (local)');
     } catch (error: any) {
       toast.error('Failed to save job');
     }

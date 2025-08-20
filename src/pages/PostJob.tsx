@@ -13,6 +13,8 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, X } from "lucide-react";
 import { toast } from "sonner";
 import Header from "@/components/Header";
+import { db } from '@/integrations/firebase/client';
+import { collection, getDocs, addDoc } from 'firebase/firestore';
 
 interface Company {
   id: string;
@@ -56,9 +58,8 @@ const PostJob = () => {
 
   const fetchCompanies = async () => {
     try {
-      const res = await fetch('/api/companies', { credentials: 'include' });
-      const body = await res.json();
-      setCompanies((body.companies || []).map((c: any) => ({ id: c._id || c.id, name: c.name })));
+      const snap = await getDocs(collection(db, 'companies'));
+      setCompanies(snap.docs.map((d) => ({ id: d.id, name: (d.data() as any).name })));
     } catch (error) {
       console.error("Error fetching companies:", error);
     }
@@ -99,19 +100,13 @@ const PostJob = () => {
         salary_max: formData.salary_max ? parseInt(formData.salary_max) : null,
         token_amount: formData.token_amount ? parseFloat(formData.token_amount) : null,
         skills,
+        created_at: new Date().toISOString(),
         expires_at: formData.expires_at ? new Date(formData.expires_at).toISOString() : null,
       } as any;
 
-      const res = await fetch('/api/jobs', {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(jobData),
-      });
-      const body = await res.json();
-      if (!res.ok) throw new Error(body.error || 'Failed');
+      const docRef = await addDoc(collection(db, 'jobs'), jobData);
       toast.success("Job posted successfully!");
-      navigate(`/jobs/${body.job._id}`);
+      navigate(`/jobs/${docRef.id}`);
     } catch (error) {
       console.error("Error posting job:", error);
       toast.error("Failed to post job");
