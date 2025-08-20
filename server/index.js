@@ -22,9 +22,25 @@ const __dirname = path.dirname(__filename);
 // Middleware
 app.use(express.json());
 app.use(cookieParser());
+// CORS configuration
+const allowedOrigins = [
+  'http://localhost:8080', // Development
+  'https://avax-forge-jobs.vercel.app', // Production frontend
+  'https://avax-forge-jobs.vercel.app/' // Production frontend with trailing slash
+];
+
 app.use(
   cors({
-    origin: process.env.CORS_ORIGIN || 'http://localhost:8080',
+    origin: function (origin, callback) {
+      // Allow requests with no origin (like mobile apps or curl requests)
+      if (!origin) return callback(null, true);
+      
+      if (allowedOrigins.indexOf(origin) !== -1) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
     credentials: true,
   })
 );
