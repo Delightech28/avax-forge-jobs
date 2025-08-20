@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
-import { useWallet } from '@/hooks/useWallet';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -16,26 +15,42 @@ const Auth = () => {
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
   const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
   
   const { user, signIn, signUp, signInWithWallet } = useAuth();
-  const { connectWallet, isConnected, walletAddress, isConnecting } = useWallet();
   const navigate = useNavigate();
+  const [isConnecting, setIsConnecting] = useState(false);
+  const [walletAddress, setWalletAddress] = useState<string | null>(null);
 
   useEffect(() => {
     if (user) {
-      navigate('/');
+      // Check if there's a redirect URL in the URL params
+      const urlParams = new URLSearchParams(window.location.search);
+      const redirectTo = urlParams.get('redirectTo');
+      if (redirectTo) {
+        navigate(redirectTo);
+      } else {
+        navigate('/');
+      }
     }
   }, [user, navigate]);
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setErrorMessage(''); // Clear previous errors
 
     try {
       if (isSignUp) {
-        await signUp(email, password, fullName);
+        const result = await signUp(email, password, fullName);
+        if (result.error) {
+          setErrorMessage(result.error.message || 'Failed to create account');
+        }
       } else {
-        await signIn(email, password);
+        const result = await signIn(email, password);
+        if (result.error) {
+          setErrorMessage(result.error.message || 'Failed to sign in');
+        }
       }
     } finally {
       setLoading(false);
@@ -44,14 +59,34 @@ const Auth = () => {
 
   const handleWalletConnect = async () => {
     try {
-      const result = await connectWallet();
-      if (result.success && result.address) {
-        // Authenticate user with wallet address
-        await signInWithWallet(result.address);
+      setErrorMessage(''); // Clear previous errors
+      setIsConnecting(true);
+      
+      if (!(window as any).ethereum) {
+        setErrorMessage('MetaMask not found. Please install MetaMask extension.');
+        return;
+      }
+      
+      const provider = (window as any).ethereum;
+      const accounts = await provider.request({ method: 'eth_requestAccounts' });
+      const address = accounts[0];
+      
+      if (address) {
+        setWalletAddress(address);
+        const authResult = await signInWithWallet(address);
+        if (authResult.error) {
+          setErrorMessage(authResult.error.message || 'Failed to authenticate with wallet');
+        }
         // Navigation will happen automatically via useEffect when user state changes
       }
-    } catch (error) {
-      console.error('Error connecting wallet:', error);
+    } catch (error: any) {
+      if (error.code === 4001) {
+        setErrorMessage('Wallet connection was rejected');
+      } else {
+        setErrorMessage('Failed to connect wallet. Please try again.');
+      }
+    } finally {
+      setIsConnecting(false);
     }
   };
 
@@ -78,22 +113,31 @@ const Auth = () => {
               <div className="space-y-4">
                 <Button
                   onClick={handleWalletConnect}
-                  disabled={isConnecting || isConnected}
+                  disabled={isConnecting || !!walletAddress}
                   className="w-full"
                   size="lg"
                 >
                   <Wallet className="mr-2 h-4 w-4" />
                   {isConnecting ? 'Connecting...' : 
-                   isConnected ? `Connected: ${walletAddress?.slice(0, 6)}...${walletAddress?.slice(-4)}` :
+                   walletAddress ? `Connected: ${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}` :
                    'Connect MetaMask'}
                 </Button>
                 
-                {isConnected && (
+                {walletAddress && (
                   <div className="text-center text-sm text-muted-foreground">
                     <p>Wallet connected successfully!</p>
                     <p className="break-all">{walletAddress}</p>
                   </div>
                 )}
+                
+                {/* Error message display for wallet */}
+                {errorMessage && (
+                  <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-md">
+                    <p className="text-sm text-destructive text-center">{errorMessage}</p>
+                  </div>
+                )}
+                
+
               </div>
             </TabsContent>
             
@@ -169,6 +213,28 @@ const Auth = () => {
                      </>
                    )}
                 </Button>
+                
+                {/* Error message display */}
+                {errorMessage && (
+                  <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-md">
+                    <p className="text-sm text-destructive text-center">{errorMessage}</p>
+                  </div>
+                )}
+                
+                {/* Helpful guidance text */}
+                <div className="text-xs text-muted-foreground text-center space-y-1 pt-2">
+                  {isSignUp ? (
+                    <>
+                      <p>Password must be at least 6 characters</p>
+                      <p>You'll be signed in automatically after account creation</p>
+                    </>
+                  ) : (
+                    <>
+                      <p>Forgot your password? You'll need to create a new account</p>
+                      <p>Don't have an account? Switch to "Create Account" above</p>
+                    </>
+                  )}
+                </div>
               </form>
             </TabsContent>
           </Tabs>

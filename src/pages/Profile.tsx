@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import { useWallet } from '@/hooks/useWallet';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -17,8 +16,7 @@ import { toast } from 'sonner';
 import Header from '@/components/Header';
 
 const Profile = () => {
-  const { user, updateProfile } = useAuth();
-  const { connectWallet, isConnected, walletAddress, isConnecting } = useWallet();
+  const { user, updateProfile, signInWithWallet } = useAuth();
   
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
@@ -31,6 +29,7 @@ const Profile = () => {
   const [locQuery, setLocQuery] = useState('');
   const [locResults, setLocResults] = useState<{ label: string }[]>([]);
   const [locLoading, setLocLoading] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -92,23 +91,52 @@ const Profile = () => {
   }, [locQuery, isEditing]);
 
   const handleWalletConnect = async () => {
-    const result = await connectWallet();
-    if (result.success) {
-      toast.success('Wallet connected successfully!');
+    try {
+      setIsConnecting(true);
+      if (!(window as any).ethereum) {
+        toast.error('MetaMask not found. Please install MetaMask extension.');
+        return;
+      }
+      
+      const provider = (window as any).ethereum;
+      const accounts = await provider.request({ method: 'eth_requestAccounts' });
+      const address = accounts[0];
+      
+      if (address) {
+        const result = await signInWithWallet(address);
+        if (result.error) {
+          toast.error(result.error.message || 'Failed to connect wallet');
+        } else {
+          toast.success('Wallet connected successfully!');
+        }
+      }
+    } catch (error: any) {
+      if (error.code === 4001) {
+        toast.error('Wallet connection was rejected');
+      } else {
+        toast.error('Failed to connect wallet. Please try again.');
+      }
+    } finally {
+      setIsConnecting(false);
     }
   };
 
   if (!user) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <p>Please sign in to view your profile.</p>
+        <div className="text-center">
+          <p className="mb-4">Please sign in to view your profile.</p>
+          <Button onClick={() => navigate("/auth?redirectTo=/profile")}>
+            Sign In
+          </Button>
+        </div>
       </div>
     );
   }
 
   // Check if user signed up with wallet (no email) or email
   const needsNameSetup = !user.fullName;
-  const needsWalletConnection = !isConnected;
+  const needsWalletConnection = !user.walletAddress;
 
   return (
     <div className="min-h-screen bg-background">
@@ -155,7 +183,7 @@ const Profile = () => {
                   
                   <div className="flex items-center gap-2">
                     <Calendar className="h-4 w-4" />
-                    <span>Joined {new Date((user as any).createdAt || '').toLocaleDateString()}</span>
+                    <span>Joined {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'Recently'}</span>
                   </div>
                 </div>
 
@@ -164,16 +192,16 @@ const Profile = () => {
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium">Wallet Status</span>
-                    {isConnected ? (
+                    {user.walletAddress ? (
                       <Badge variant="default">Connected</Badge>
                     ) : (
                       <Badge variant="secondary">Not Connected</Badge>
                     )}
                   </div>
                   
-                  {isConnected && walletAddress && (
+                  {user.walletAddress && (
                     <p className="text-xs text-muted-foreground break-all">
-                      {walletAddress}
+                      {user.walletAddress}
                     </p>
                   )}
                 </div>
