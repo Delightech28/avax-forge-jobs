@@ -16,7 +16,7 @@ export interface AuthUser {
   id: string;
   email: string;
   fullName?: string;
-  role?: 'admin' | 'moderator' | 'user';
+  role?: 'admin' | 'moderator' | 'user' | 'company';
   walletAddress?: string;
   createdAt?: string;
 }
@@ -42,7 +42,7 @@ export const useAuth = () => {
     return () => unsubscribe();
   }, []);
 
-  const signUp = async (email: string, password: string, fullName?: string) => {
+  const signUp = async (email: string, password: string, fullName?: string, role: 'user' | 'company' = 'user') => {
     try {
       const cred = await createUserWithEmailAndPassword(auth, email, password);
       if (fullName) {
@@ -53,7 +53,7 @@ export const useAuth = () => {
       await setDoc(userRef, {
         email,
         fullName: fullName || cred.user.displayName || '',
-        role: 'user',
+        role: role,
         createdAt: serverTimestamp(),
       }, { merge: true });
       const mapped = await mapFirebaseUserToAuthUser(cred.user);

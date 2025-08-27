@@ -7,42 +7,48 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
-import { Wallet, User, Mail, Lock, UserPlus } from 'lucide-react';
+import { Wallet, User, Mail, Lock, UserPlus, Briefcase } from 'lucide-react';
 
 const Auth = () => {
   const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [userRole, setUserRole] = useState<'user' | 'company'>('user');
+  const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   
-  const { user, signIn, signUp, signInWithWallet } = useAuth();
+  const { user, loading, signIn, signUp, signInWithWallet } = useAuth();
   const navigate = useNavigate();
   const [isConnecting, setIsConnecting] = useState(false);
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
 
   useEffect(() => {
-    if (user) {
+    console.log('Auth useEffect - user:', user, 'loading:', loading);
+    
+    if (user && !loading) {
+      console.log('User authenticated, redirecting...');
       // Check if there's a redirect URL in the URL params
       const urlParams = new URLSearchParams(window.location.search);
       const redirectTo = urlParams.get('redirectTo');
       if (redirectTo) {
+        console.log('Redirecting to:', redirectTo);
         navigate(redirectTo);
       } else {
+        console.log('Redirecting to home');
         navigate('/');
       }
     }
-  }, [user, navigate]);
+  }, [user, loading, navigate]);
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
+    setSubmitting(true);
     setErrorMessage(''); // Clear previous errors
 
     try {
       if (isSignUp) {
-        const result = await signUp(email, password, fullName);
+        const result = await signUp(email, password, fullName, userRole);
         if (result.error) {
           setErrorMessage(result.error.message || 'Failed to create account');
         }
@@ -53,7 +59,7 @@ const Auth = () => {
         }
       }
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   };
 
@@ -89,6 +95,25 @@ const Auth = () => {
       setIsConnecting(false);
     }
   };
+
+  // Show loading state while checking authentication
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background/90 to-primary/5 p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader className="space-y-1 text-center">
+            <CardTitle className="text-2xl font-bold">Loading...</CardTitle>
+            <CardDescription>
+              Checking authentication status...
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background/90 to-primary/5 p-4">
@@ -144,21 +169,61 @@ const Auth = () => {
             <TabsContent value="email" className="space-y-4">
               <form onSubmit={handleAuth} className="space-y-4">
                 {isSignUp && (
-                  <div className="space-y-2">
-                    <Label htmlFor="fullName">Full Name</Label>
-                    <div className="relative">
-                      <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="fullName"
-                        type="text"
-                        placeholder="John Doe"
-                        value={fullName}
-                        onChange={(e) => setFullName(e.target.value)}
-                        className="pl-10"
-                        required
-                      />
+                  <>
+                    <div className="space-y-2">
+                      <Label htmlFor="fullName">Full Name</Label>
+                      <div className="relative">
+                        <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          id="fullName"
+                          type="text"
+                          placeholder="John Doe"
+                          value={fullName}
+                          onChange={(e) => setFullName(e.target.value)}
+                          className="pl-10"
+                          required
+                        />
+                      </div>
                     </div>
-                  </div>
+                    
+                    <div className="space-y-2">
+                      <Label>I am looking to:</Label>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div
+                          className={`p-3 border-2 rounded-lg cursor-pointer transition-all ${
+                            userRole === 'user'
+                              ? 'border-primary bg-primary/5 text-primary'
+                              : 'border-border hover:border-primary/50'
+                          }`}
+                          onClick={() => setUserRole('user')}
+                        >
+                          <div className="flex items-center gap-2">
+                            <User className="h-4 w-4" />
+                            <span className="font-medium">Find Jobs</span>
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            I'm a job seeker
+                          </p>
+                        </div>
+                        <div
+                          className={`p-3 border-2 rounded-lg cursor-pointer transition-all ${
+                            userRole === 'company'
+                              ? 'border-primary bg-primary/5 text-primary'
+                              : 'border-border hover:border-primary/50'
+                          }`}
+                          onClick={() => setUserRole('company')}
+                        >
+                          <div className="flex items-center gap-2">
+                            <Briefcase className="h-4 w-4" />
+                            <span className="font-medium">Hire Talent</span>
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            I'm an employer
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </>
                 )}
                 
                 <div className="space-y-2">
@@ -194,25 +259,25 @@ const Auth = () => {
                   </div>
                 </div>
                 
-                <Button
-                  type="submit"
-                  className="w-full"
-                  disabled={loading}
-                  size="lg"
-                >
-                  {loading ? 'Please wait...' : 
-                   isSignUp ? (
-                     <>
-                       <UserPlus className="mr-2 h-4 w-4" />
-                       Create Account
-                     </>
-                   ) : (
-                     <>
-                       <User className="mr-2 h-4 w-4" />
-                       Sign In
-                     </>
-                   )}
-                </Button>
+                                 <Button
+                   type="submit"
+                   className="w-full"
+                   disabled={submitting}
+                   size="lg"
+                 >
+                   {submitting ? 'Please wait...' : 
+                    isSignUp ? (
+                      <>
+                        <UserPlus className="mr-2 h-4 w-4" />
+                        Create Account
+                      </>
+                    ) : (
+                      <>
+                        <User className="mr-2 h-4 w-4" />
+                        Sign In
+                      </>
+                    )}
+                 </Button>
                 
                 {/* Error message display */}
                 {errorMessage && (

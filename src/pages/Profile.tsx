@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,16 +8,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Wallet, User, Mail, Calendar, Edit2, MapPin, ExternalLink } from 'lucide-react';
-import { storage } from '@/integrations/firebase/client';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { Wallet, User, Mail, Calendar, Edit2, MapPin, ExternalLink, CheckCircle, Briefcase } from 'lucide-react';
+
 import { db } from '@/integrations/firebase/client';
-import { collection, query, where, limit, getDocs } from 'firebase/firestore';
 import { toast } from 'sonner';
 import Header from '@/components/Header';
 
 const Profile = () => {
-  const { user, updateProfile, signInWithWallet } = useAuth();
+  const { user, updateProfile, signInWithWallet, loading } = useAuth();
+  const navigate = useNavigate();
   
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
@@ -26,9 +26,8 @@ const Profile = () => {
     websiteUrl: '',
     avatarUrl: '',
   });
-  const [locQuery, setLocQuery] = useState('');
-  const [locResults, setLocResults] = useState<{ label: string }[]>([]);
-  const [locLoading, setLocLoading] = useState(false);
+  const [websiteError, setWebsiteError] = useState('');
+
   const [isConnecting, setIsConnecting] = useState(false);
 
   useEffect(() => {
@@ -40,55 +39,97 @@ const Profile = () => {
         websiteUrl: (user as any).websiteUrl || '',
         avatarUrl: (user as any).avatarUrl || '',
       });
+      setWebsiteError(''); // Clear any previous validation errors
     }
   }, [user]);
 
   const handleSave = async () => {
+    if (websiteError) {
+      toast.error('Please fix the website URL before saving');
+      return;
+    }
     const { error } = await updateProfile(formData);
     if (!error) {
       setIsEditing(false);
     }
   };
 
-  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files || e.target.files.length === 0) return;
-    const file = e.target.files[0];
+  const validateWebsiteUrl = (url: string) => {
+    if (!url) return true; // Empty URL is valid
     try {
-      if (!user) return;
-      const storageRef = ref(storage, `avatars/${user.id}/${file.name}`);
-      await uploadBytes(storageRef, file);
-      const url = await getDownloadURL(storageRef);
-      setFormData(prev => ({ ...prev, avatarUrl: url }));
-      toast.success('Avatar uploaded');
-    } catch (err) {
-      toast.error('Failed to upload avatar');
+      const urlObj = new URL(url.startsWith('http') ? url : `https://${url}`);
+      return urlObj.protocol === 'http:' || urlObj.protocol === 'https:';
+    } catch {
+      return false;
     }
   };
 
-  useEffect(() => {
-    const q = locQuery.trim();
-    if (!isEditing || q.length < 2) { setLocResults([]); return; }
-    const t = setTimeout(async () => {
-      try {
-        setLocLoading(true);
-        // Simple demo: search cities collection if you add one; otherwise just echo the query
+  const handleWebsiteChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setFormData(prev => ({ ...prev, websiteUrl: value }));
+    
+    if (value && !validateWebsiteUrl(value)) {
+      setWebsiteError('Please enter a valid URL (e.g., https://example.com)');
+    } else {
+      setWebsiteError('');
+    }
+  };
+
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0) return;
+    const file = e.target.files[0];
+    
+    // Validate file size (max 2MB for base64)
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error('File size must be less than 2MB');
+      return;
+    }
+    
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please select an image file');
+      return;
+    }
+    
+    try {
+      if (!user) return;
+      
+      // Show loading state
+      toast.loading('Processing avatar...');
+      
+      // Convert file to base64
+      const reader = new FileReader();
+      reader.onload = async (event) => {
         try {
-          const citiesCol = collection(db, 'locations');
-          const qy = query(citiesCol, where('label', '>=', q), where('label', '<=', q + '\uf8ff'), limit(8));
-          const snap = await getDocs(qy);
-          const results = snap.docs.map(d => ({ label: (d.data() as any).label as string }));
-          setLocResults(results);
-        } catch {
-          setLocResults([]);
+          const base64String = event.target?.result as string;
+          
+          // Update form data with base64 image
+          setFormData(prev => ({ ...prev, avatarUrl: base64String }));
+          
+          toast.dismiss();
+          toast.success('Avatar updated successfully!');
+        } catch (err: any) {
+          console.error('Avatar processing error:', err);
+          toast.dismiss();
+          toast.error('Failed to process avatar. Please try again.');
         }
-      } catch {
-        setLocResults([]);
-      } finally {
-        setLocLoading(false);
-      }
-    }, 250);
-    return () => clearTimeout(t);
-  }, [locQuery, isEditing]);
+      };
+      
+      reader.onerror = () => {
+        toast.dismiss();
+        toast.error('Failed to read image file. Please try again.');
+      };
+      
+      reader.readAsDataURL(file);
+      
+    } catch (err: any) {
+      console.error('Avatar upload error:', err);
+      toast.dismiss();
+      toast.error(`Upload failed: ${err.message || 'Unknown error'}`);
+    }
+  };
+
+
 
   const handleWalletConnect = async () => {
     try {
@@ -120,6 +161,16 @@ const Profile = () => {
       setIsConnecting(false);
     }
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <p className="mb-4">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!user) {
     return (
@@ -155,8 +206,14 @@ const Profile = () => {
                     {user.fullName?.charAt(0) || user.email?.charAt(0) || 'U'}
                   </AvatarFallback>
                 </Avatar>
-                <CardTitle className="text-xl">
+                <CardTitle className="text-xl flex items-center gap-2">
                   {user.fullName || user.email?.split('@')[0] || 'Anonymous User'}
+                  {user.role === 'company' && (
+                    <Badge variant="default" className="text-xs">
+                      <CheckCircle className="h-3 w-3 mr-1" />
+                      Verified Company
+                    </Badge>
+                  )}
                 </CardTitle>
                 <CardDescription />
               </CardHeader>
@@ -174,17 +231,31 @@ const Profile = () => {
                     </div>
                   )}
                   
-                  {formData.location && (
-                    <div className="flex items-center gap-2">
-                      <MapPin className="h-4 w-4" />
-                      <span>{formData.location}</span>
-                    </div>
-                  )}
-                  
-                  <div className="flex items-center gap-2">
-                    <Calendar className="h-4 w-4" />
-                    <span>Joined {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'Recently'}</span>
-                  </div>
+                                     {formData.location && (
+                     <div className="flex items-center gap-2">
+                       <MapPin className="h-4 w-4" />
+                       <span>{formData.location}</span>
+                     </div>
+                   )}
+                   
+                   {formData.websiteUrl && (
+                     <div className="flex items-center gap-2">
+                       <ExternalLink className="h-4 w-4" />
+                       <a 
+                         href={formData.websiteUrl.startsWith('http') ? formData.websiteUrl : `https://${formData.websiteUrl}`} 
+                         target="_blank" 
+                         rel="noreferrer" 
+                         className="underline hover:text-primary"
+                       >
+                         {formData.websiteUrl}
+                       </a>
+                     </div>
+                   )}
+                   
+                   <div className="flex items-center gap-2">
+                     <Calendar className="h-4 w-4" />
+                     <span>Joined {user.createdAt && !isNaN(new Date(user.createdAt).getTime()) ? new Date(user.createdAt).toLocaleDateString() : 'Recently'}</span>
+                   </div>
                 </div>
 
                 <Separator />
@@ -228,13 +299,13 @@ const Profile = () => {
             )}
 
             {needsWalletConnection && (
-              <Card className="border-blue-200 bg-blue-50 dark:bg-blue-950 dark:border-blue-800">
+              <Card className="border-gray-600 bg-black text-white">
                 <CardHeader>
                   <CardTitle className="text-lg flex items-center gap-2">
                     <Wallet className="h-5 w-5" />
                     Connect Your Wallet
                   </CardTitle>
-                  <CardDescription>
+                  <CardDescription className="text-black">
                     Connect your wallet to apply for Web3 jobs and receive payments.
                   </CardDescription>
                 </CardHeader>
@@ -247,6 +318,47 @@ const Profile = () => {
                     <Wallet className="mr-2 h-4 w-4" />
                     {isConnecting ? 'Connecting...' : 'Connect MetaMask'}
                   </Button>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Company Dashboard */}
+            {user?.role === 'company' && (
+              <Card className="border-blue-200 bg-blue-50 dark:bg-blue-950 dark:border-blue-800">
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <Briefcase className="h-5 w-5" />
+                    Company Dashboard
+                  </CardTitle>
+                  <CardDescription>
+                    Manage your job postings and company profile
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <Button 
+                      onClick={() => navigate('/post-job')}
+                      className="w-full"
+                      size="lg"
+                    >
+                      <Briefcase className="mr-2 h-4 w-4" />
+                      Post a New Job
+                    </Button>
+                    <Button 
+                      variant="outline"
+                      onClick={() => navigate('/jobs')}
+                      className="w-full"
+                      size="lg"
+                    >
+                      <User className="mr-2 h-4 w-4" />
+                      View All Jobs
+                    </Button>
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    <p>• Post unlimited job listings</p>
+                    <p>• Access to premium candidate pool</p>
+                    <p>• Verified company badge</p>
+                  </div>
                 </CardContent>
               </Card>
             )}
@@ -274,66 +386,33 @@ const Profile = () => {
               
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="full_name">Full Name</Label>
-                    {isEditing ? (
-                      <Input
-                        id="full_name"
-                        value={formData.fullName}
-                        onChange={(e) => setFormData(prev => ({ ...prev, fullName: e.target.value }))}
-                        placeholder="Enter your full name"
-                      />
-                    ) : (
-                      <p className="py-2 px-3 bg-muted rounded-md">
-                        {formData.fullName || 'Not set'}
-                      </p>
-                    )}
-                  </div>
-                  
-                  {formData.websiteUrl && (
-                    <div className="text-sm">
-                      <a href={formData.websiteUrl} target="_blank" rel="noreferrer" className="text-primary underline break-all">{formData.websiteUrl}</a>
-                    </div>
-                  )}
+                                     <div className="space-y-2">
+                     <Label htmlFor="full_name">Full Name</Label>
+                     {isEditing ? (
+                       <Input
+                         id="full_name"
+                         value={formData.fullName}
+                         onChange={(e) => setFormData(prev => ({ ...prev, fullName: e.target.value }))}
+                         placeholder="Enter your full name"
+                       />
+                     ) : (
+                       <p className="py-2 px-3 bg-muted rounded-md">
+                         {formData.fullName || 'Not set'}
+                       </p>
+                     )}
+                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="location">Location</Label>
-                    {isEditing ? (
-                      <div className="relative">
-                        <Input
-                          id="location"
-                          value={formData.location}
-                          onChange={(e) => setFormData(prev => ({ ...prev, location: e.target.value }))}
-                          placeholder="Enter your location"
-                        />
-                        <div className="mt-2">
-                          <Input
-                            id="loc_autocomplete"
-                            value={locQuery}
-                            onChange={(e) => setLocQuery(e.target.value)}
-                            placeholder="Type to search worldwide..."
-                          />
-                          {locLoading && (
-                            <div className="text-xs text-muted-foreground mt-1">Searching...</div>
-                          )}
-                          {locResults.length > 0 && (
-                            <div className="mt-1 border rounded">
-                              {locResults.map((r, i) => (
-                                <button
-                                  key={i}
-                                  type="button"
-                                  className="w-full text-left px-3 py-2 hover:bg-accent"
-                                  onClick={() => { setFormData(prev => ({ ...prev, location: r.label })); setLocResults([]); setLocQuery(''); }}
-                                >
-                                  {r.label}
-                                </button>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      </div>
+                                         {isEditing ? (
+                       <Input
+                         id="location"
+                         value={formData.location}
+                         onChange={(e) => setFormData(prev => ({ ...prev, location: e.target.value }))}
+                         placeholder="Enter your location"
+                       />
                     ) : (
                       <p className="py-2 px-3 bg-muted rounded-md">
                         {formData.location || 'Not set'}
@@ -341,26 +420,31 @@ const Profile = () => {
                     )}
                   </div>
                   
-                  <div className="space-y-2">
-                    <Label htmlFor="website_url">Website</Label>
-                    {isEditing ? (
-                      <Input
-                        id="website_url"
-                        value={formData.websiteUrl}
-                        onChange={(e) => setFormData(prev => ({ ...prev, websiteUrl: e.target.value }))}
-                        placeholder="Enter your website URL"
-                      />
-                    ) : (
-                      <p className="py-2 px-3 bg-muted rounded-md break-all flex items-center gap-2">
-                        {formData.websiteUrl ? (
-                          <>
-                            <ExternalLink className="h-4 w-4" />
-                            <a href={formData.websiteUrl} target="_blank" rel="noreferrer" className="underline">{formData.websiteUrl}</a>
-                          </>
-                        ) : 'Not set'}
-                      </p>
-                    )}
-                  </div>
+                                     <div className="space-y-2">
+                     <Label htmlFor="website_url">Website</Label>
+                     {isEditing ? (
+                       <div>
+                         <Input
+                           id="website_url"
+                           value={formData.websiteUrl}
+                           onChange={handleWebsiteChange}
+                           placeholder="Enter your website URL (e.g., https://example.com)"
+                         />
+                         {websiteError && (
+                           <p className="text-sm text-red-500 mt-1">{websiteError}</p>
+                         )}
+                       </div>
+                     ) : (
+                       <p className="py-2 px-3 bg-muted rounded-md break-all flex items-center gap-2">
+                         {formData.websiteUrl ? (
+                           <>
+                             <ExternalLink className="h-4 w-4" />
+                             <a href={formData.websiteUrl.startsWith('http') ? formData.websiteUrl : `https://${formData.websiteUrl}`} target="_blank" rel="noreferrer" className="underline">{formData.websiteUrl}</a>
+                           </>
+                         ) : 'Not set'}
+                       </p>
+                     )}
+                   </div>
                 </div>
 
                 <div className="space-y-2">

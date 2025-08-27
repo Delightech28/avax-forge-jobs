@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
-import { Bell, User, LogOut } from "lucide-react";
+import { Bell, User, LogOut, CheckCircle } from "lucide-react";
 
 const Header = () => {
   const { user, signOut } = useAuth();
@@ -30,12 +30,11 @@ const Header = () => {
             <a href="/jobs" className="text-foreground/80 hover:text-foreground transition-colors">
               Browse Jobs
             </a>
-            <a href="/post-job" className="text-foreground/80 hover:text-foreground transition-colors">
-              Post a Job
-            </a>
-            <a href="#" className="text-foreground/80 hover:text-foreground transition-colors">
-              About
-            </a>
+            {user?.role === 'company' && (
+              <a href="/post-job" className="text-foreground/80 hover:text-foreground transition-colors">
+                Post a Job
+              </a>
+            )}
           </nav>
 
           {/* Right side actions */}
@@ -46,12 +45,19 @@ const Header = () => {
             
             {user ? (
               <div className="flex items-center space-x-2">
-                <Avatar className="h-8 w-8 cursor-pointer" onClick={() => navigate('/profile')}>
-                  <AvatarImage src={user.profile?.avatar_url} />
-                  <AvatarFallback>
-                    {user.profile?.full_name?.charAt(0) || user.email?.charAt(0) || 'U'}
-                  </AvatarFallback>
-                </Avatar>
+                <div className="relative">
+                  <Avatar className="h-8 w-8 cursor-pointer" onClick={() => navigate('/profile')}>
+                    <AvatarImage src={user.profile?.avatar_url} />
+                    <AvatarFallback>
+                      {user.profile?.full_name?.charAt(0) || user.email?.charAt(0) || 'U'}
+                    </AvatarFallback>
+                  </Avatar>
+                  {user.role === 'company' && (
+                    <div className="absolute -top-1 -right-1 bg-blue-500 rounded-full p-0.5">
+                      <CheckCircle className="h-3 w-3 text-white" />
+                    </div>
+                  )}
+                </div>
                 <Button 
                   variant="ghost" 
                   size="icon"

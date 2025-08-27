@@ -16,23 +16,19 @@ import Header from "@/components/Header";
 import { db } from '@/integrations/firebase/client';
 import { collection, getDocs, addDoc } from 'firebase/firestore';
 
-interface Company {
-  id: string;
-  name: string;
-}
+
 
 const PostJob = () => {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const navigate = useNavigate();
-  const [companies, setCompanies] = useState<Company[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [skills, setSkills] = useState<string[]>([]);
   const [newSkill, setNewSkill] = useState("");
 
   const [formData, setFormData] = useState({
     title: "",
     description: "",
-    company_id: "",
+    company_name: user?.fullName || "",
     job_type: "full_time",
     location_type: "remote",
     location: "",
@@ -49,21 +45,21 @@ const PostJob = () => {
   });
 
   useEffect(() => {
-    if (!user) {
+    console.log('PostJob useEffect - user:', user, 'loading:', loading);
+    
+    // Only redirect if user is explicitly null (not loading)
+    if (user === null && !loading) {
+      console.log('Redirecting to auth page');
       navigate("/auth?redirectTo=/post-job");
       return;
     }
-    fetchCompanies();
-  }, [user, navigate]);
-
-  const fetchCompanies = async () => {
-    try {
-      const snap = await getDocs(collection(db, 'companies'));
-      setCompanies(snap.docs.map((d) => ({ id: d.id, name: (d.data() as any).name })));
-    } catch (error) {
-      console.error("Error fetching companies:", error);
+    // If user exists and is a company, we're ready to show the form
+    if (user && !loading && user.role === 'company') {
+      console.log('Company user authenticated, ready to post job');
     }
-  };
+  }, [user, loading, navigate]);
+
+
 
   const handleInputChange = (field: string, value: string | boolean) => {
     setFormData(prev => ({
@@ -86,12 +82,12 @@ const PostJob = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.title || !formData.description || !formData.company_id) {
+    if (!formData.title || !formData.description || !formData.company_name) {
       toast.error("Please fill in all required fields");
       return;
     }
 
-    setLoading(true);
+    setSubmitting(true);
     try {
       const jobData = {
         ...formData,
@@ -111,11 +107,27 @@ const PostJob = () => {
       console.error("Error posting job:", error);
       toast.error("Failed to post job");
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   };
 
-  if (!user) {
+  // Show loading state while checking authentication
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <div className="container mx-auto px-4 py-8 text-center">
+          <div className="max-w-md mx-auto">
+            <h2 className="text-2xl font-bold mb-4">Loading...</h2>
+            <p className="text-muted-foreground">Please wait while we check your authentication status.</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show sign in required if user is null
+  if (user === null) {
     return (
       <div className="min-h-screen bg-background">
         <Header />
@@ -125,6 +137,24 @@ const PostJob = () => {
             <p className="text-muted-foreground mb-6">You need to be signed in to post a job.</p>
             <Button onClick={() => navigate("/auth?redirectTo=/post-job")} size="lg">
               Sign In to Post Job
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show access denied if user is not a company
+  if (user && user.role !== 'company') {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <div className="container mx-auto px-4 py-8 text-center">
+          <div className="max-w-md mx-auto">
+            <h2 className="text-2xl font-bold mb-4">Access Denied</h2>
+            <p className="text-muted-foreground mb-6">Only companies can post jobs. Please sign up as a company to access this feature.</p>
+            <Button onClick={() => navigate("/auth")} size="lg">
+              Sign Up as Company
             </Button>
           </div>
         </div>
@@ -149,27 +179,7 @@ const PostJob = () => {
             </p>
           </div>
 
-          {/* Company Warning */}
-          {companies.length === 0 && (
-            <Card className="mb-8 border-yellow-200 bg-yellow-50 dark:bg-yellow-950 dark:border-yellow-800">
-              <CardContent className="pt-6">
-                <div className="flex items-center gap-3">
-                  <Briefcase className="h-5 w-5 text-yellow-600" />
-                  <div>
-                    <p className="font-medium text-yellow-800 dark:text-yellow-200">
-                      Company Profile Required
-                    </p>
-                    <p className="text-sm text-yellow-700 dark:text-yellow-300">
-                      You need to create a company profile before posting jobs.
-                    </p>
-                  </div>
-                </div>
-                <Button variant="outline" className="mt-3" asChild>
-                  <a href="/companies/new">Create Company Profile</a>
-                </Button>
-              </CardContent>
-            </Card>
-          )}
+          
 
           <form onSubmit={handleSubmit} className="space-y-8">
             {/* Basic Information */}
@@ -199,25 +209,17 @@ const PostJob = () => {
                     />
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="company">Company *</Label>
-                    <Select 
-                      value={formData.company_id} 
-                      onValueChange={(value) => handleInputChange("company_id", value)}
-                      required
-                    >
-                      <SelectTrigger className="h-12">
-                        <SelectValue placeholder="Select a company" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {companies.map((company) => (
-                          <SelectItem key={company.id} value={company.id}>
-                            {company.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                                     <div className="space-y-2">
+                     <Label htmlFor="company">Company *</Label>
+                     <Input
+                       id="company"
+                       value={formData.company_name}
+                       onChange={(e) => handleInputChange("company_name", e.target.value)}
+                       placeholder="Your company name"
+                       className="h-12 text-lg"
+                       required
+                     />
+                   </div>
                 </div>
 
                 <div className="space-y-2">
@@ -495,13 +497,13 @@ const PostJob = () => {
 
             {/* Submit Button */}
             <div className="text-center">
-              <Button 
-                type="submit" 
-                disabled={loading || companies.length === 0}
-                className="w-full max-w-md h-14 text-lg font-semibold"
-                size="lg"
-              >
-                {loading ? (
+                             <Button 
+                 type="submit" 
+                 disabled={submitting}
+                 className="w-full max-w-md h-14 text-lg font-semibold"
+                 size="lg"
+               >
+                {submitting ? (
                   <div className="flex items-center gap-2">
                     <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
                     Posting Job...
