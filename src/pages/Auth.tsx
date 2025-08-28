@@ -18,6 +18,15 @@ const Auth = () => {
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   
+  // Password strength checker state
+  const [passwordChecks, setPasswordChecks] = useState({
+    length: false,
+    uppercase: false,
+    lowercase: false,
+    number: false,
+    special: false
+  });
+  
   const { user, loading, signIn, signUp, signInWithWallet } = useAuth();
   const navigate = useNavigate();
   const [isConnecting, setIsConnecting] = useState(false);
@@ -41,6 +50,25 @@ const Auth = () => {
     }
   }, [user, loading, navigate]);
 
+  // Password strength checker function
+  const checkPasswordStrength = (password: string) => {
+    setPasswordChecks({
+      length: password.length >= 8,
+      uppercase: /[A-Z]/.test(password),
+      lowercase: /[a-z]/.test(password),
+      number: /\d/.test(password),
+      special: /[!@#$%^&*(),.?":{}|<>]/.test(password)
+    });
+  };
+
+  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newPassword = e.target.value;
+    setPassword(newPassword);
+    if (isSignUp) {
+      checkPasswordStrength(newPassword);
+    }
+  };
+
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
@@ -51,6 +79,9 @@ const Auth = () => {
         const result = await signUp(email, password, fullName, userRole);
         if (result.error) {
           setErrorMessage(result.error.message || 'Failed to create account');
+        } else {
+          // Clear form after successful signup
+          clearForm();
         }
       } else {
         const result = await signIn(email, password);
@@ -96,6 +127,36 @@ const Auth = () => {
     }
   };
 
+  const clearForm = () => {
+    setEmail('');
+    setPassword('');
+    setFullName('');
+    setPasswordChecks({
+      length: false,
+      uppercase: false,
+      lowercase: false,
+      number: false,
+      special: false
+    });
+    setErrorMessage('');
+  };
+
+  const getFullNameConfig = () => {
+    if (userRole === 'user') {
+      return {
+        label: 'Full Name',
+        icon: <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />,
+        placeholder: 'John Doe'
+      };
+    } else {
+             return {
+         label: 'Company Name',
+         icon: <Briefcase className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />,
+         placeholder: 'ArenaApp'
+       };
+    }
+  };
+
   // Show loading state while checking authentication
   if (loading) {
     return (
@@ -125,6 +186,7 @@ const Auth = () => {
           <CardDescription>
             Connect your wallet or sign in to access the platform
           </CardDescription>
+
         </CardHeader>
         
         <CardContent>
@@ -171,13 +233,13 @@ const Auth = () => {
                 {isSignUp && (
                   <>
                     <div className="space-y-2">
-                      <Label htmlFor="fullName">Full Name</Label>
+                      <Label htmlFor="fullName">{getFullNameConfig().label}</Label>
                       <div className="relative">
-                        <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                        {getFullNameConfig().icon}
                         <Input
                           id="fullName"
                           type="text"
-                          placeholder="John Doe"
+                          placeholder={getFullNameConfig().placeholder}
                           value={fullName}
                           onChange={(e) => setFullName(e.target.value)}
                           className="pl-10"
@@ -251,20 +313,47 @@ const Auth = () => {
                       type="password"
                       placeholder="••••••••"
                       value={password}
-                      onChange={(e) => setPassword(e.target.value)}
+                      onChange={handlePasswordChange}
                       className="pl-10"
                       required
-                      minLength={6}
+                      minLength={8}
                     />
                   </div>
+                  {isSignUp && (
+                    <div className="text-xs space-y-1">
+                      <p className="font-medium">Password must contain:</p>
+                      <ul className="space-y-0.5">
+                        <li className={`flex items-center gap-2 ${passwordChecks.length ? 'text-green-600' : 'text-red-500'}`}>
+                          <span className={`w-2 h-2 rounded-full ${passwordChecks.length ? 'bg-green-500' : 'bg-red-500'}`}></span>
+                          At least 8 characters
+                        </li>
+                        <li className={`flex items-center gap-2 ${passwordChecks.uppercase ? 'text-green-600' : 'text-red-500'}`}>
+                          <span className={`w-2 h-2 rounded-full ${passwordChecks.uppercase ? 'bg-green-500' : 'bg-red-500'}`}></span>
+                          One uppercase letter (A-Z)
+                        </li>
+                        <li className={`flex items-center gap-2 ${passwordChecks.lowercase ? 'text-green-600' : 'text-red-500'}`}>
+                          <span className={`w-2 h-2 rounded-full ${passwordChecks.lowercase ? 'bg-green-500' : 'bg-red-500'}`}></span>
+                          One lowercase letter (a-z)
+                        </li>
+                        <li className={`flex items-center gap-2 ${passwordChecks.number ? 'text-green-600' : 'text-red-500'}`}>
+                          <span className={`w-2 h-2 rounded-full ${passwordChecks.number ? 'bg-green-500' : 'bg-red-500'}`}></span>
+                          One number (0-9)
+                        </li>
+                        <li className={`flex items-center gap-2 ${passwordChecks.special ? 'text-green-600' : 'text-red-500'}`}>
+                          <span className={`w-2 h-2 rounded-full ${passwordChecks.special ? 'bg-green-500' : 'bg-red-500'}`}></span>
+                          One special character (!@#$%^&amp;*(),.?":{}|&lt;&gt;)
+                        </li>
+                      </ul>
+                    </div>
+                  )}
                 </div>
                 
-                                 <Button
-                   type="submit"
-                   className="w-full"
-                   disabled={submitting}
-                   size="lg"
-                 >
+                <Button
+                  type="submit"
+                  className="w-full"
+                  disabled={submitting}
+                  size="lg"
+                >
                    {submitting ? 'Please wait...' : 
                     isSignUp ? (
                       <>
@@ -277,7 +366,7 @@ const Auth = () => {
                         Sign In
                       </>
                     )}
-                 </Button>
+                </Button>
                 
                 {/* Error message display */}
                 {errorMessage && (
@@ -290,8 +379,6 @@ const Auth = () => {
                 <div className="text-xs text-muted-foreground text-center space-y-1 pt-2">
                   {isSignUp ? (
                     <>
-                      <p>Password must be at least 6 characters</p>
-                      <p>You'll be signed in automatically after account creation</p>
                     </>
                   ) : (
                     <>

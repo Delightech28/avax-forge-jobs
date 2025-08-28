@@ -1,8 +1,11 @@
 import JobCard from "./JobCard";
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 const FeaturedJobs = () => {
+  const navigate = useNavigate();
+  
   // Mock data - will be replaced with blockchain data
   const mockJobs = [
     {
@@ -69,12 +72,12 @@ const FeaturedJobs = () => {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
           {mockJobs.map((job) => (
-            <JobCard key={job.id} job={job} />
+            <JobCard key={job.id} job={job} isFeatured={true} />
           ))}
         </div>
 
         <div className="text-center">
-          <Button variant="gradient" size="lg">
+          <Button variant="gradient" size="lg" onClick={() => navigate('/jobs')}>
             View All Jobs
             <ArrowRight className="h-4 w-4 ml-2" />
           </Button>

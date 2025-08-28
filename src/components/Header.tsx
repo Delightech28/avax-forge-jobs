@@ -21,7 +21,7 @@ const Header = () => {
       <div className="container mx-auto px-4 py-4">
         <div className="flex items-center justify-between">
           {/* Logo */}
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-2 cursor-pointer" onClick={() => navigate('/') }>
             <h1 className="text-xl font-bold gradient-text">AVAX Forge Jobs</h1>
           </div>
 
@@ -39,24 +39,35 @@ const Header = () => {
 
           {/* Right side actions */}
           <div className="flex items-center space-x-3">
-            <Button variant="ghost" size="icon" className="relative">
-              <Bell className="h-4 w-4" />
-            </Button>
+            {user && (
+              <Button 
+                variant="ghost" 
+                size="icon"
+                onClick={() => navigate('/notifications')}
+                className="text-muted-foreground hover:text-foreground relative"
+              >
+                <Bell className="h-4 w-4" />
+                {(() => {
+                  const count = parseInt((typeof window !== 'undefined' && window.localStorage.getItem('unreadCount')) || '0', 10);
+                  return count > 0 ? (
+                    <div className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] leading-none rounded-full min-w-[14px] h-[14px] px-[3px] flex items-center justify-center">
+                      {count > 9 ? '9+' : count}
+                    </div>
+                  ) : null;
+                })()}
+              </Button>
+            )}
             
             {user ? (
               <div className="flex items-center space-x-2">
                 <div className="relative">
                   <Avatar className="h-8 w-8 cursor-pointer" onClick={() => navigate('/profile')}>
-                    <AvatarImage src={user.profile?.avatar_url} />
+                    <AvatarImage src={(user as any).avatarUrl || (user as any).profile?.avatar_url} />
                     <AvatarFallback>
-                      {user.profile?.full_name?.charAt(0) || user.email?.charAt(0) || 'U'}
+                      {(user as any).fullName?.charAt(0) || (user as any).profile?.full_name?.charAt(0) || user.email?.charAt(0) || 'U'}
                     </AvatarFallback>
                   </Avatar>
-                  {user.role === 'company' && (
-                    <div className="absolute -top-1 -right-1 bg-blue-500 rounded-full p-0.5">
-                      <CheckCircle className="h-3 w-3 text-white" />
-                    </div>
-                  )}
+
                 </div>
                 <Button 
                   variant="ghost" 

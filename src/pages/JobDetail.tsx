@@ -30,6 +30,7 @@ interface JobDetail {
   token_amount: number;
   requires_wallet: boolean;
   created_at: string;
+  expires_at?: string;
   companies: {
     id: string;
     name: string;
@@ -81,6 +82,7 @@ const JobDetail = () => {
         token_amount: j.token_amount,
         requires_wallet: j.requires_wallet,
         created_at: j.created_at,
+        expires_at: j.expires_at,
         companies: j.company || (undefined as any)
       });
     } catch (error) {
@@ -98,9 +100,18 @@ const JobDetail = () => {
   };
 
   const handleApply = async () => {
+    if (job?.expires_at && new Date(job.expires_at).getTime() <= Date.now()) {
+      toast.error('This job has expired.');
+      return;
+    }
     if (!user) {
       toast.error("Please sign in to apply for jobs");
       navigate("/auth");
+      return;
+    }
+    if (job?.requires_wallet && !user.walletAddress) {
+      toast.error('This job requires a connected Web3 wallet.');
+      navigate('/profile');
       return;
     }
 
@@ -181,6 +192,8 @@ const JobDetail = () => {
     );
   }
 
+  const isExpired = job?.expires_at && new Date(job.expires_at).getTime() <= Date.now();
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
@@ -202,7 +215,12 @@ const JobDetail = () => {
             <div>
               <div className="flex items-start justify-between mb-4">
                 <div>
-                  <h1 className="text-3xl font-bold mb-2">{job.title}</h1>
+                  <h1 className="text-3xl font-bold mb-2 flex items-center gap-2">
+                    {job.title}
+                    {isExpired && (
+                      <span className="text-xs px-2 py-1 rounded bg-muted text-muted-foreground">Expired</span>
+                    )}
+                  </h1>
                   <div className="flex items-center gap-4 text-lg text-muted-foreground">
                     <span className="font-medium text-foreground">{job.companies?.name}</span>
                     {job.companies?.location && (
@@ -334,17 +352,22 @@ const JobDetail = () => {
                 ) : (
                   <Button 
                     onClick={handleApply} 
-                    disabled={applying}
+                    disabled={applying || (job.requires_wallet && !user?.walletAddress) || isExpired}
                     className="w-full"
                     size="lg"
+                    title={
+                      isExpired ? 'This job has expired.' :
+                      (job.requires_wallet && !user?.walletAddress) ? 'This job requires a connected Web3 wallet.' : undefined
+                    }
                   >
-                    {applying ? "Applying..." : "Apply Now"}
+                    {applying ? "Applying..." : (job.requires_wallet && !user?.walletAddress) ? "Wallet Required" : "Apply Now"}
                   </Button>
                 )}
                 <Button 
                   variant="outline" 
                   onClick={saveJob}
                   className="w-full"
+                  title={job.requires_wallet && !user?.walletAddress ? 'This job requires a connected Web3 wallet.' : undefined}
                 >
                   <Heart className="h-4 w-4 mr-2" />
                   Save Job

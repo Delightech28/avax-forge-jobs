@@ -9,7 +9,9 @@ import {
   updateProfile as updateAuthProfile,
   type User as FirebaseUser,
 } from 'firebase/auth';
-import { doc, getDoc, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, serverTimestamp, collection, query, where, getDocs } from 'firebase/firestore';
+import { validatePassword, validateEmail, checkRateLimit } from '@/utils/validation';
+import { checkEmailRoleConflict } from '@/utils/userValidation';
 type Session = null;
 
 export interface AuthUser {
@@ -44,6 +46,32 @@ export const useAuth = () => {
 
   const signUp = async (email: string, password: string, fullName?: string, role: 'user' | 'company' = 'user') => {
     try {
+      // Rate limiting check
+      if (!checkRateLimit(`signup_${email}`, 3, 15 * 60 * 1000)) {
+        toast.error('Too many signup attempts. Please try again in 15 minutes.');
+        return { error: new Error('Rate limit exceeded') };
+      }
+
+      // Validate email format
+      if (!validateEmail(email)) {
+        toast.error('Please enter a valid email address.');
+        return { error: new Error('Invalid email format') };
+      }
+
+      // Validate password strength
+      const passwordValidation = validatePassword(password);
+      if (!passwordValidation.isValid) {
+        toast.error(`Password requirements not met:\n${passwordValidation.errors.join('\n')}`);
+        return { error: new Error('Weak password') };
+      }
+
+      // Check if email already exists with a different role
+      const emailCheck = await checkEmailRoleConflict(email, role);
+      if (emailCheck.exists) {
+        toast.error(emailCheck.message || 'Email already in use');
+        return { error: new Error(emailCheck.message || 'Email already in use') };
+      }
+
       const cred = await createUserWithEmailAndPassword(auth, email, password);
       if (fullName) {
         await updateAuthProfile(cred.user, { displayName: fullName });
@@ -51,47 +79,79 @@ export const useAuth = () => {
       // Create user profile doc
       const userRef = doc(db, 'users', cred.user.uid);
       await setDoc(userRef, {
-        email,
+        email: email.toLowerCase(), // Store email in lowercase for consistency
         fullName: fullName || cred.user.displayName || '',
         role: role,
         createdAt: serverTimestamp(),
+        lastLoginAt: serverTimestamp(),
+        signupIp: 'client-side', // In a real app, you'd get this from the server
       }, { merge: true });
       const mapped = await mapFirebaseUserToAuthUser(cred.user);
       setUser(mapped);
       toast.success('Account created and signed in successfully!');
       return { error: null };
     } catch (error: any) {
-      // Handle specific Firebase auth errors
-      let errorMessage = 'An unexpected error occurred';
+      // Handle specific Firebase auth errors with user-friendly messages
+      let errorMessage = 'Failed to create account. Please try again.';
+      
+      // Log the actual error for debugging (but don't show to user)
+      console.log('Firebase signup error:', error.code, error.message);
       
       if (error.code === 'auth/email-already-in-use') {
         errorMessage = 'An account with this email already exists. Please sign in instead.';
       } else if (error.code === 'auth/invalid-email') {
         errorMessage = 'Please enter a valid email address.';
       } else if (error.code === 'auth/weak-password') {
-        errorMessage = 'Password must be at least 6 characters long.';
+        errorMessage = 'Password does not meet security requirements. Please use a stronger password.';
       } else if (error.code === 'auth/operation-not-allowed') {
         errorMessage = 'Email/password sign up is not enabled. Please contact support.';
       } else if (error.code === 'auth/too-many-requests') {
         errorMessage = 'Too many failed attempts. Please try again later.';
+      } else if (error.code === 'auth/network-request-failed') {
+        errorMessage = 'Network error. Please check your internet connection and try again.';
+      } else if (error.code === 'auth/internal-error') {
+        errorMessage = 'An internal error occurred. Please try again.';
       }
       
       toast.error(errorMessage);
-      return { error };
+      return { error: new Error(errorMessage) };
     }
   };
 
 
   const signIn = async (email: string, password: string) => {
     try {
+      // Rate limiting check for sign in attempts
+      if (!checkRateLimit(`signin_${email}`, 5, 15 * 60 * 1000)) {
+        toast.error('Too many sign in attempts. Please try again in 15 minutes.');
+        return { error: new Error('Rate limit exceeded') };
+      }
+
+      // Validate email format
+      if (!validateEmail(email)) {
+        toast.error('Please enter a valid email address.');
+        return { error: new Error('Invalid email format') };
+      }
+
       const cred = await signInWithEmailAndPassword(auth, email, password);
+      
+      // Update last login time
+      const userRef = doc(db, 'users', cred.user.uid);
+      await updateDoc(userRef, {
+        lastLoginAt: serverTimestamp(),
+        loginCount: (cred.user as any).loginCount ? (cred.user as any).loginCount + 1 : 1,
+      });
+
       const mapped = await mapFirebaseUserToAuthUser(cred.user);
       setUser(mapped);
       toast.success('Welcome back!');
       return { error: null };
     } catch (error: any) {
-      // Handle specific Firebase auth errors
-      let errorMessage = 'An unexpected error occurred';
+      // Handle specific Firebase auth errors with user-friendly messages
+      let errorMessage = 'Invalid email or password. Please check your credentials and try again.';
+      
+      // Log the actual error for debugging (but don't show to user)
+      console.log('Firebase auth error:', error.code, error.message);
       
       if (error.code === 'auth/user-not-found') {
         errorMessage = 'No account found with this email. Please sign up first.';
@@ -107,10 +167,14 @@ export const useAuth = () => {
         errorMessage = 'Too many failed attempts. Please try again later.';
       } else if (error.code === 'auth/operation-not-allowed') {
         errorMessage = 'Email/password sign in is not enabled. Please contact support.';
+      } else if (error.code === 'auth/network-request-failed') {
+        errorMessage = 'Network error. Please check your internet connection and try again.';
+      } else if (error.code === 'auth/internal-error') {
+        errorMessage = 'An internal error occurred. Please try again.';
       }
       
       toast.error(errorMessage);
-      return { error };
+      return { error: new Error(errorMessage) };
     }
   };
 

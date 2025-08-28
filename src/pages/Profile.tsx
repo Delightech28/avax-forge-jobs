@@ -209,9 +209,9 @@ const Profile = () => {
                 <CardTitle className="text-xl flex items-center gap-2">
                   {user.fullName || user.email?.split('@')[0] || 'Anonymous User'}
                   {user.role === 'company' && (
-                    <Badge variant="default" className="text-xs">
-                      <CheckCircle className="h-3 w-3 mr-1" />
-                      Verified Company
+                    <Badge variant="outline" className="text-xs cursor-pointer hover:bg-blue-500/10 text-blue-500 border-blue-400">
+                      <CheckCircle className="h-3 w-3 mr-1 text-blue-500" />
+                      Get Verified
                     </Badge>
                   )}
                 </CardTitle>
@@ -305,7 +305,7 @@ const Profile = () => {
                     <Wallet className="h-5 w-5" />
                     Connect Your Wallet
                   </CardTitle>
-                  <CardDescription className="text-black">
+                  <CardDescription className="text-muted-foreground">
                     Connect your wallet to apply for Web3 jobs and receive payments.
                   </CardDescription>
                 </CardHeader>
@@ -324,7 +324,7 @@ const Profile = () => {
 
             {/* Company Dashboard */}
             {user?.role === 'company' && (
-              <Card className="border-blue-200 bg-blue-50 dark:bg-blue-950 dark:border-blue-800">
+              <Card className="border-blue-200 bg-black dark:bg-black dark:border-blue-800">
                 <CardHeader>
                   <CardTitle className="text-lg flex items-center gap-2">
                     <Briefcase className="h-5 w-5" />

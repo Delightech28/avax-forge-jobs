@@ -449,7 +449,14 @@ const PostJob = () => {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="tokenAmount">Token Amount</Label>
+                    <Label htmlFor="tokenAmount" className="flex items-center gap-2">
+                      Token Amount
+                      <span 
+                        className="text-xs text-muted-foreground border px-1 rounded cursor-help"
+                        title="Total number of tokens offered as compensation (e.g., signing bonus or equity tokens). Leave blank if not offering tokens."
+                      >?
+                      </span>
+                    </Label>
                     <Input
                       id="tokenAmount"
                       type="number"

@@ -29,6 +29,7 @@ interface Job {
   token_amount: number;
   requires_wallet: boolean;
   created_at: string;
+  expires_at?: string;
   companies: {
     id: string;
     name: string;
@@ -80,21 +81,29 @@ const Jobs = () => {
           token_amount: j.token_amount,
           requires_wallet: j.requires_wallet,
           created_at: j.created_at,
+          expires_at: j.expires_at,
           companies: j.company || undefined,
         } as Job;
       });
       // Simple client-side text search
+      const now = Date.now();
+      const notExpired = list.filter((j) => !j.expires_at || new Date(j.expires_at).getTime() > now);
       const filtered = searchTerm
-        ? list.filter((j) =>
+        ? notExpired.filter((j) =>
             [j.title, j.description, j.location, j.companies?.name]
               .filter(Boolean)
               .some((t: any) => String(t).toLowerCase().includes(searchTerm.toLowerCase()))
           )
-        : list;
+        : notExpired;
       setJobs(filtered);
     } catch (error) {
       console.error("Error fetching jobs:", error);
-      toast.error("Failed to fetch jobs");
+      // Don't show error toast for empty collections - this is normal
+      if (error instanceof Error && error.message.includes('Missing or insufficient permissions')) {
+        console.log('No jobs found or permissions issue - this is normal for new installations');
+      } else {
+        toast.error("Failed to fetch jobs");
+      }
     } finally {
       setLoading(false);
     }

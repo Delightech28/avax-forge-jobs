@@ -18,7 +18,7 @@ interface JobCardProps {
   };
 }
 
-const JobCard = ({ job }: JobCardProps) => {
+const JobCard = ({ job, isFeatured = false }: JobCardProps) => {
   return (
     <Card className="group hover:shadow-xl transition-all duration-300 hover:-translate-y-1 glass-card border-border/50">
       <CardHeader className="pb-3">
@@ -78,10 +78,10 @@ const JobCard = ({ job }: JobCardProps) => {
 
       <CardFooter className="pt-0">
         <div className="flex w-full gap-3">
-          <Button variant="outline" className="flex-1">
+          <Button variant="outline" className="flex-1" disabled={isFeatured}>
             View Details
           </Button>
-          <Button variant="default" className="flex-1">
+          <Button variant="default" className="flex-1" disabled={isFeatured}>
             Apply Now
           </Button>
         </div>

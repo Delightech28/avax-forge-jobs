@@ -1,165 +1,171 @@
-import { Separator } from "@/components/ui/separator";
-import { Github, Twitter, Linkedin, Mail } from "lucide-react";
+import { Link } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
+import { Button } from "@/components/ui/button";
+import { 
+  Mail, 
+  MessageCircle, 
+  Users, 
+  Globe, 
+  Shield, 
+  FileText, 
+  HelpCircle, 
+  BookOpen,
+  Briefcase,
+  Search,
+  User,
+  DollarSign,
+  Building
+} from "lucide-react";
 
 const Footer = () => {
-  const currentYear = new Date().getFullYear();
+  const { user } = useAuth();
 
   return (
-    <footer className="bg-card border-t">
+    <footer className="bg-card border-t border-border/40">
       <div className="container mx-auto px-4 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
           {/* Company Info */}
           <div className="space-y-4">
             <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-gradient-to-r from-primary to-primary-glow rounded-lg flex items-center justify-center glow-effect">
-                <span className="text-white font-bold text-lg">A</span>
-              </div>
-              <h3 className="text-lg font-bold gradient-text">AVAX Forge Jobs</h3>
+              <h3 className="text-xl font-bold gradient-text">AVAX Forge Jobs</h3>
             </div>
-            <p className="text-muted-foreground text-sm">
-              The premier destination for Web3 and traditional tech jobs. 
-              Connect talent with opportunity in the decentralized future.
+            <p className="text-foreground/70 text-sm leading-relaxed">
+              The future of Web3 employment. Connect with verified employers and discover 
+              opportunities in the decentralized world.
             </p>
             <div className="flex space-x-4">
-              <a 
-                href="#" 
-                className="text-muted-foreground hover:text-primary transition-colors"
-                aria-label="Twitter"
-              >
-                <Twitter className="h-5 w-5" />
-              </a>
-              <a 
-                href="#" 
-                className="text-muted-foreground hover:text-primary transition-colors"
-                aria-label="LinkedIn"
-              >
-                <Linkedin className="h-5 w-5" />
-              </a>
-              <a 
-                href="#" 
-                className="text-muted-foreground hover:text-primary transition-colors"
-                aria-label="GitHub"
-              >
-                <Github className="h-5 w-5" />
-              </a>
-              <a 
-                href="#" 
-                className="text-muted-foreground hover:text-primary transition-colors"
-                aria-label="Email"
-              >
-                <Mail className="h-5 w-5" />
-              </a>
+              <Button variant="ghost" size="icon" className="text-foreground/70 hover:text-foreground">
+                <Mail className="h-4 w-4" />
+              </Button>
+              <Button variant="ghost" size="icon" className="text-foreground/70 hover:text-foreground">
+                <MessageCircle className="h-4 w-4" />
+              </Button>
+              <Button variant="ghost" size="icon" className="text-foreground/70 hover:text-foreground">
+                <Users className="h-4 w-4" />
+              </Button>
             </div>
           </div>
 
           {/* For Job Seekers */}
           <div className="space-y-4">
-            <h4 className="font-semibold">For Job Seekers</h4>
+            <h4 className="font-semibold text-foreground flex items-center gap-2">
+              <User className="h-4 w-4" />
+              For Job Seekers
+            </h4>
             <ul className="space-y-2 text-sm">
               <li>
-                <a href="/jobs" className="text-muted-foreground hover:text-foreground transition-colors">
+                <Link to="/jobs" className="text-foreground/70 hover:text-foreground transition-colors">
                   Browse Jobs
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="/jobs?type=remote" className="text-muted-foreground hover:text-foreground transition-colors">
-                  Remote Jobs
-                </a>
-              </li>
-              <li>
-                <a href="/jobs?type=web3" className="text-muted-foreground hover:text-foreground transition-colors">
+                <span className="text-foreground/50 cursor-not-allowed">
                   Web3 Jobs
-                </a>
+                </span>
               </li>
               <li>
-                <a href="/profile" className="text-muted-foreground hover:text-foreground transition-colors">
+                <Link to="/profile" className="text-foreground/70 hover:text-foreground transition-colors">
                   My Profile
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="/applications" className="text-muted-foreground hover:text-foreground transition-colors">
+                <span className="text-foreground/50 cursor-not-allowed">
                   My Applications
-                </a>
+                </span>
               </li>
             </ul>
           </div>
 
           {/* For Employers */}
           <div className="space-y-4">
-            <h4 className="font-semibold">For Employers</h4>
+            <h4 className="font-semibold text-foreground flex items-center gap-2">
+              <Building className="h-4 w-4" />
+              For Employers
+            </h4>
             <ul className="space-y-2 text-sm">
+              {user?.role === 'company' ? (
+                <>
+                  <li>
+                    <Link to="/post-job" className="text-foreground/70 hover:text-foreground transition-colors">
+                      Post a Job
+                    </Link>
+                  </li>
+                  <li>
+                    <Link to="/profile" className="text-foreground/70 hover:text-foreground transition-colors">
+                      Employer Dashboard
+                    </Link>
+                  </li>
+                </>
+              ) : (
+                <>
+                  <li>
+                    <span className="text-foreground/50 cursor-not-allowed">
+                      Post a Job
+                    </span>
+                  </li>
+                  <li>
+                    <span className="text-foreground/50 cursor-not-allowed">
+                      Employer Dashboard
+                    </span>
+                  </li>
+                </>
+              )}
               <li>
-                <a href="/post-job" className="text-muted-foreground hover:text-foreground transition-colors">
-                  Post a Job
-                </a>
-              </li>
-              <li>
-                <a href="/companies/new" className="text-muted-foreground hover:text-foreground transition-colors">
-                  Create Company
-                </a>
-              </li>
-              <li>
-                <a href="/pricing" className="text-muted-foreground hover:text-foreground transition-colors">
+                <span className="text-foreground/50 cursor-not-allowed">
                   Pricing
-                </a>
-              </li>
-              <li>
-                <a href="/dashboard" className="text-muted-foreground hover:text-foreground transition-colors">
-                  Employer Dashboard
-                </a>
+                </span>
               </li>
             </ul>
           </div>
 
-          {/* Resources */}
+          {/* Company & Support */}
           <div className="space-y-4">
-            <h4 className="font-semibold">Resources</h4>
+            <h4 className="font-semibold text-foreground flex items-center gap-2">
+              <Globe className="h-4 w-4" />
+              Company & Support
+            </h4>
             <ul className="space-y-2 text-sm">
               <li>
-                <a href="/about" className="text-muted-foreground hover:text-foreground transition-colors">
+                <Link to="/about" className="text-foreground/70 hover:text-foreground transition-colors">
                   About Us
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="/blog" className="text-muted-foreground hover:text-foreground transition-colors">
+                <Link to="/blog" className="text-foreground/70 hover:text-foreground transition-colors">
                   Blog
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="/help" className="text-muted-foreground hover:text-foreground transition-colors">
+                <Link to="/help" className="text-foreground/70 hover:text-foreground transition-colors">
                   Help Center
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="/privacy" className="text-muted-foreground hover:text-foreground transition-colors">
-                  Privacy Policy
-                </a>
-              </li>
-              <li>
-                <a href="/terms" className="text-muted-foreground hover:text-foreground transition-colors">
-                  Terms of Service
-                </a>
+                <Link to="/contact" className="text-foreground/70 hover:text-foreground transition-colors">
+                  Contact
+                </Link>
               </li>
             </ul>
           </div>
         </div>
 
-        <Separator className="my-8" />
-        
-        <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
-          <p className="text-sm text-muted-foreground">
-            © {currentYear} AVAX Forge Jobs. All rights reserved.
-          </p>
-          <div className="flex space-x-6 text-sm">
-            <a href="/privacy" className="text-muted-foreground hover:text-foreground transition-colors">
-              Privacy
-            </a>
-            <a href="/terms" className="text-muted-foreground hover:text-foreground transition-colors">
-              Terms
-            </a>
-            <a href="/contact" className="text-muted-foreground hover:text-foreground transition-colors">
-              Contact
-            </a>
+        {/* Bottom Section */}
+        <div className="border-t border-border/40 mt-8 pt-8">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+            <div className="flex items-center space-x-6 text-sm text-foreground/70">
+              <Link to="/privacy" className="hover:text-foreground transition-colors">
+                Privacy Policy
+              </Link>
+              <Link to="/terms" className="hover:text-foreground transition-colors">
+                Terms of Service
+              </Link>
+              <span>© 2025 AVAX Forge Jobs. All rights reserved.</span>
+            </div>
+            
+            <div className="flex items-center space-x-2 text-sm text-foreground/70">
+              <Shield className="h-4 w-4" />
+              <span>Built on Avalanche Blockchain</span>
+            </div>
           </div>
         </div>
       </div>

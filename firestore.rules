@@ -1,0 +1,92 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Users collection rules
+    match /users/{userId} {
+      // Users can read and write their own profile
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+      
+      // Prevent users from changing their role after creation
+      allow update: if request.auth != null && 
+        request.auth.uid == userId && 
+        resource.data.role == request.resource.data.role;
+      
+      // Validate user data on creation
+      allow create: if request.auth != null && 
+        request.auth.uid == userId &&
+        request.resource.data.email is string &&
+        request.resource.data.email.size() > 0 &&
+        request.resource.data.role in ['user', 'company'] &&
+        request.resource.data.fullName is string &&
+        request.resource.data.fullName.size() > 0;
+    }
+    
+    // Jobs collection rules
+    match /jobs/{jobId} {
+      // Anyone can read jobs
+      allow read: if true;
+      
+      // Only company users can create jobs
+      allow create: if request.auth != null && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'company';
+      
+      // Only the job creator can update or delete their jobs
+      allow update, delete: if request.auth != null && 
+        resource.data.posted_by == request.auth.uid;
+    }
+    
+    // Companies collection rules
+    match /companies/{companyId} {
+      // Anyone can read companies
+      allow read: if true;
+      
+      // Only authenticated users can create companies
+      allow create: if request.auth != null;
+      
+      // Only the company creator can update or delete
+      allow update, delete: if request.auth != null && 
+        resource.data.created_by == request.auth.uid;
+    }
+    
+    // Applications collection rules (if you have one)
+    match /applications/{applicationId} {
+      // Users can read their own applications
+      allow read: if request.auth != null && 
+        (resource.data.user_id == request.auth.uid || 
+         resource.data.job_owner == request.auth.uid);
+      
+      // Only user role can create applications
+      allow create: if request.auth != null && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'user';
+      
+      // Only the applicant or job owner can update applications
+      allow update: if request.auth != null && 
+        (resource.data.user_id == request.auth.uid || 
+         resource.data.job_owner == request.auth.uid);
+    }
+    
+    // Notifications collection rules
+    match /notifications/{notificationId} {
+      // Users can only read their own notifications
+      allow read: if request.auth != null && 
+        resource.data.user_id == request.auth.uid;
+      
+      // Users can create notifications for themselves
+      allow create: if request.auth != null && 
+        request.resource.data.user_id == request.auth.uid;
+      
+      // Users can update their own notifications
+      allow update: if request.auth != null && 
+        resource.data.user_id == request.auth.uid;
+      
+      // Users can delete their own notifications
+      allow delete: if request.auth != null && 
+        resource.data.user_id == request.auth.uid;
+    }
+
+    // Notification settings per user
+    match /notification_settings/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+  }
+}

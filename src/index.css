@@ -120,6 +120,10 @@
     background: var(--gradient-hero);
     min-height: 100vh;
   }
+  /* Hide scrollbars without disabling scroll */
+  ::-webkit-scrollbar { width: 0; height: 0; }
+  ::-webkit-scrollbar-thumb { background: transparent; }
+  * { scrollbar-width: none; }
 }
 
 @layer components {

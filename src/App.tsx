@@ -11,6 +11,13 @@ import PostJob from "./pages/PostJob";
 import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
 import CreateCompany from "./pages/CreateCompany";
+import AboutUs from "./pages/AboutUs";
+import Blog from "./pages/Blog";
+import HelpCenter from "./pages/HelpCenter";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import TermsOfService from "./pages/TermsOfService";
+import Contact from "./pages/Contact";
+import Notifications from "./pages/Notifications";
 
 const queryClient = new QueryClient();
 
@@ -28,6 +35,13 @@ const App = () => (
           <Route path="/post-job" element={<PostJob />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/companies/new" element={<CreateCompany />} />
+          <Route path="/about" element={<AboutUs />} />
+          <Route path="/blog" element={<Blog />} />
+          <Route path="/help" element={<HelpCenter />} />
+          <Route path="/privacy" element={<PrivacyPolicy />} />
+          <Route path="/terms" element={<TermsOfService />} />
+          <Route path="/contact" element={<Contact />} />
+          <Route path="/notifications" element={<Notifications />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
