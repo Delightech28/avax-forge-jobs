@@ -14,7 +14,7 @@ import { Plus, X, Briefcase, MapPin, DollarSign, Calendar, Zap } from "lucide-re
 import { toast } from "sonner";
 import Header from "@/components/Header";
 import { db } from '@/integrations/firebase/client';
-import { collection, getDocs, addDoc } from 'firebase/firestore';
+import { collection, addDoc, doc as fsDoc, getDoc, serverTimestamp } from 'firebase/firestore';
 
 
 
@@ -45,17 +45,15 @@ const PostJob = () => {
   });
 
   useEffect(() => {
-    console.log('PostJob useEffect - user:', user, 'loading:', loading);
-    
-    // Only redirect if user is explicitly null (not loading)
-    if (user === null && !loading) {
-      console.log('Redirecting to auth page');
+    if (loading) return;
+    if (!user) {
       navigate("/auth?redirectTo=/post-job");
       return;
     }
-    // If user exists and is a company, we're ready to show the form
-    if (user && !loading && user.role === 'company') {
-      console.log('Company user authenticated, ready to post job');
+    if (user.role !== 'company') {
+      toast.error("Only verified companies can post jobs.");
+      navigate("/");
+      return;
     }
   }, [user, loading, navigate]);
 
@@ -82,13 +80,53 @@ const PostJob = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Enhanced validation
+    const errors = [];
+    
     if (!formData.title || !formData.description || !formData.company_name) {
-      toast.error("Please fill in all required fields");
+      errors.push("Please fill in all required fields (title, description, company name)");
+    }
+    
+    if (skills.length === 0) {
+      errors.push("Please add at least one required skill");
+    }
+    
+    if (!formData.salary_min || !formData.salary_max) {
+      errors.push("Please specify both minimum and maximum salary");
+    }
+    
+    if (!formData.salary_currency) {
+      errors.push("Please select a currency");
+    }
+    
+    // Token amount is optional - no validation required
+    
+    if (errors.length > 0) {
+      toast.error(errors.join(". "));
       return;
     }
 
     setSubmitting(true);
     try {
+      // Preflight: ensure authenticated company with users/{uid}.role === 'company'
+      if (!user) {
+        toast.error('Please sign in to post a job');
+        return;
+      }
+      const userRef = fsDoc(db, 'users', user.id as string);
+      const userSnap = await getDoc(userRef);
+      if (!userSnap.exists()) {
+        console.warn('[PostJob] users doc not found for uid:', user.id);
+        toast.error('Your company profile is not initialized. Please sign out and sign in again.');
+        return;
+      }
+      const userData: any = userSnap.data();
+      console.log('[PostJob] preflight', { uid: user.id, roleFromDoc: userData?.role, userDocPath: `users/${user.id}` });
+      if (userData.role !== 'company') {
+        toast.error('Only verified companies can post jobs.');
+        return;
+      }
+
       const jobData = {
         ...formData,
         posted_by: user?.id,
@@ -105,7 +143,14 @@ const PostJob = () => {
       navigate(`/jobs/${docRef.id}`);
     } catch (error) {
       console.error("Error posting job:", error);
-      toast.error("Failed to post job");
+      try {
+        const err: any = error;
+        console.log('[PostJob] Firestore error code:', err?.code, 'message:', err?.message);
+      } catch {}
+      const message = (error as any)?.code === 'permission-denied'
+        ? 'Insufficient permissions. Ensure you are signed in as a company and try again.'
+        : 'Failed to post job';
+      toast.error(message);
     } finally {
       setSubmitting(false);
     }
@@ -315,10 +360,10 @@ const PostJob = () => {
               <CardHeader className="bg-gradient-to-r from-blue-500/5 to-blue-500/10">
                 <CardTitle className="flex items-center gap-2">
                   <Zap className="h-5 w-5 text-blue-500" />
-                  Required Skills
+                  Required Skills *
                 </CardTitle>
                 <CardDescription>
-                  Add the key skills required for this position
+                  Add the key skills required for this position (at least one skill is required)
                 </CardDescription>
               </CardHeader>
               <CardContent className="pt-6 space-y-4">
@@ -370,47 +415,49 @@ const PostJob = () => {
               </CardHeader>
               <CardContent className="pt-6 space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <div className="space-y-2">
-                    <Label htmlFor="salaryMin">Min Salary</Label>
-                    <Input
-                      id="salaryMin"
-                      type="number"
-                      value={formData.salary_min}
-                      onChange={(e) => handleInputChange("salary_min", e.target.value)}
-                      placeholder="50000"
-                      className="h-12"
-                    />
-                  </div>
+                                  <div className="space-y-2">
+                  <Label htmlFor="salaryMin">Min Salary *</Label>
+                  <Input
+                    id="salaryMin"
+                    type="number"
+                    value={formData.salary_min}
+                    onChange={(e) => handleInputChange("salary_min", e.target.value)}
+                    placeholder="50000"
+                    className="h-12"
+                    required
+                  />
+                </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="salaryMax">Max Salary</Label>
-                    <Input
-                      id="salaryMax"
-                      type="number"
-                      value={formData.salary_max}
-                      onChange={(e) => handleInputChange("salary_max", e.target.value)}
-                      placeholder="80000"
-                      className="h-12"
-                    />
-                  </div>
+                <div className="space-y-2">
+                  <Label htmlFor="salaryMax">Max Salary *</Label>
+                  <Input
+                    id="salaryMax"
+                    type="number"
+                    value={formData.salary_max}
+                    onChange={(e) => handleInputChange("salary_max", e.target.value)}
+                    placeholder="80000"
+                    className="h-12"
+                    required
+                  />
+                </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="currency">Currency</Label>
-                    <Select 
-                      value={formData.salary_currency} 
-                      onValueChange={(value) => handleInputChange("salary_currency", value)}
-                    >
-                      <SelectTrigger className="h-12">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="USD">USD</SelectItem>
-                        <SelectItem value="EUR">EUR</SelectItem>
-                        <SelectItem value="GBP">GBP</SelectItem>
-                        <SelectItem value="CAD">CAD</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+                <div className="space-y-2">
+                  <Label htmlFor="currency">Currency *</Label>
+                  <Select 
+                    value={formData.salary_currency} 
+                    onValueChange={(value) => handleInputChange("salary_currency", value)}
+                  >
+                    <SelectTrigger className="h-12">
+                      <SelectValue placeholder="Select currency" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="USD">USD</SelectItem>
+                      <SelectItem value="EUR">EUR</SelectItem>
+                      <SelectItem value="GBP">GBP</SelectItem>
+                      <SelectItem value="CAD">CAD</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -450,10 +497,10 @@ const PostJob = () => {
 
                   <div className="space-y-2">
                     <Label htmlFor="tokenAmount" className="flex items-center gap-2">
-                      Token Amount
+                      Token Amount (Optional)
                       <span 
                         className="text-xs text-muted-foreground border px-1 rounded cursor-help"
-                        title="Total number of tokens offered as compensation (e.g., signing bonus or equity tokens). Leave blank if not offering tokens."
+                        title="Total number of tokens offered as compensation (e.g., signing bonus or equity tokens). Optional field for additional token compensation."
                       >?
                       </span>
                     </Label>

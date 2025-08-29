@@ -3,7 +3,7 @@ import { useSearchParams } from "react-router-dom";
 // Using Express API instead of Supabase
 import { useAuth } from "@/hooks/useAuth";
 import { db } from '@/integrations/firebase/client';
-import { collection, getDocs, query, where } from 'firebase/firestore';
+import { collection, getDocs, query, where, doc, setDoc, deleteDoc, getDoc } from 'firebase/firestore';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -47,10 +47,14 @@ const Jobs = () => {
   const [jobType, setJobType] = useState(searchParams.get("type") || "");
   const [locationType, setLocationType] = useState(searchParams.get("location") || "");
   const [experienceLevel, setExperienceLevel] = useState(searchParams.get("experience") || "");
+  const [savedJobs, setSavedJobs] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     fetchJobs();
-  }, [searchParams]);
+    if (user) {
+      fetchSavedJobs();
+    }
+  }, [searchParams, user]);
 
   const fetchJobs = async () => {
     setLoading(true);
@@ -102,10 +106,53 @@ const Jobs = () => {
       if (error instanceof Error && error.message.includes('Missing or insufficient permissions')) {
         console.log('No jobs found or permissions issue - this is normal for new installations');
       } else {
-        toast.error("Failed to fetch jobs");
+      toast.error("Failed to fetch jobs");
       }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchSavedJobs = async () => {
+    if (!user) return;
+    try {
+      const savedRef = doc(db, 'users', user.id as string, 'saved_jobs', 'list');
+      const savedSnap = await getDoc(savedRef);
+      if (savedSnap.exists()) {
+        const data = savedSnap.data();
+        setSavedJobs(new Set(data.jobIds || []));
+      }
+    } catch (error) {
+      console.error('Error fetching saved jobs:', error);
+    }
+  };
+
+  const saveJob = async (jobId: string) => {
+    if (!user) {
+      toast.error("Please sign in to save jobs");
+      return;
+    }
+
+    try {
+      const savedRef = doc(db, 'users', user.id as string, 'saved_jobs', 'list');
+      const isCurrentlySaved = savedJobs.has(jobId);
+      
+      if (isCurrentlySaved) {
+        // Remove from saved
+        const updatedJobIds = Array.from(savedJobs).filter(id => id !== jobId);
+        await setDoc(savedRef, { jobIds: updatedJobIds }, { merge: true });
+        setSavedJobs(new Set(updatedJobIds));
+        toast.success("Job removed from saved jobs");
+      } else {
+        // Add to saved
+        const updatedJobIds = Array.from(savedJobs).concat(jobId);
+        await setDoc(savedRef, { jobIds: updatedJobIds }, { merge: true });
+        setSavedJobs(new Set(updatedJobIds));
+        toast.success("Job saved successfully");
+      }
+    } catch (error) {
+      console.error('Error saving job:', error);
+      toast.error("Failed to save job");
     }
   };
 
@@ -117,15 +164,6 @@ const Jobs = () => {
     if (experienceLevel && experienceLevel !== "all") params.set("experience", experienceLevel);
     
     setSearchParams(params);
-  };
-
-  const saveJob = async (jobId: string) => {
-    if (!user) {
-      toast.error("Please sign in to save jobs");
-      return;
-    }
-    // Optional: implement saved jobs collection under users/{uid}/saved/{jobId}
-    toast.success("Job saved (local) — implement Firestore save if needed.");
   };
 
   const formatSalary = (min: number, max: number, currency: string) => {
@@ -275,9 +313,13 @@ const Jobs = () => {
                       variant="ghost"
                       size="icon"
                       onClick={() => saveJob(job.id)}
-                      className="text-muted-foreground hover:text-foreground"
+                      className={`hover:text-foreground transition-colors ${
+                        savedJobs.has(job.id) 
+                          ? 'text-red-500 hover:text-red-600' 
+                          : 'text-muted-foreground'
+                      }`}
                     >
-                      <Heart className="h-4 w-4" />
+                      <Heart className={`h-4 w-4 ${savedJobs.has(job.id) ? 'fill-current' : ''}`} />
                     </Button>
                   </div>
                 </CardHeader>
@@ -298,8 +340,8 @@ const Jobs = () => {
                       {job.experience_level} level
                     </Badge>
                     {job.requires_wallet && (
-                      <Badge variant="outline" className="border-primary text-primary">
-                        Web3
+                      <Badge variant="outline" className="border-primary text-primary" title="Wallet connection required to apply">
+                        Wallet Required
                       </Badge>
                     )}
                   </div>
@@ -329,7 +371,10 @@ const Jobs = () => {
                       )}
                       {job.token_compensation && (
                         <p className="flex items-center gap-1 text-sm text-primary">
-                          💎 {job.token_amount} {job.token_compensation}
+                          <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M12 2L13.09 8.26L20 9L13.09 9.74L12 16L10.91 9.74L4 9L10.91 8.26L12 2Z"/>
+                          </svg>
+                          {job.token_amount} {job.token_compensation}
                         </p>
                       )}
                     </div>

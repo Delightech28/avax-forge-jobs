@@ -348,12 +348,12 @@ const Auth = () => {
                   )}
                 </div>
                 
-                <Button
-                  type="submit"
-                  className="w-full"
-                  disabled={submitting}
-                  size="lg"
-                >
+                                 <Button
+                   type="submit"
+                   className="w-full"
+                   disabled={submitting}
+                   size="lg"
+                 >
                    {submitting ? 'Please wait...' : 
                     isSignUp ? (
                       <>
@@ -366,7 +366,7 @@ const Auth = () => {
                         Sign In
                       </>
                     )}
-                </Button>
+                 </Button>
                 
                 {/* Error message display */}
                 {errorMessage && (

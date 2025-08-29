@@ -28,7 +28,7 @@ const Footer = () => {
           <div className="space-y-4">
             <div className="flex items-center space-x-2">
               <h3 className="text-xl font-bold gradient-text">AVAX Forge Jobs</h3>
-            </div>
+              </div>
             <p className="text-foreground/70 text-sm leading-relaxed">
               The future of Web3 employment. Connect with verified employers and discover 
               opportunities in the decentralized world.
@@ -85,16 +85,16 @@ const Footer = () => {
             <ul className="space-y-2 text-sm">
               {user?.role === 'company' ? (
                 <>
-                  <li>
+              <li>
                     <Link to="/post-job" className="text-foreground/70 hover:text-foreground transition-colors">
-                      Post a Job
+                  Post a Job
                     </Link>
-                  </li>
-                  <li>
+              </li>
+              <li>
                     <Link to="/profile" className="text-foreground/70 hover:text-foreground transition-colors">
                       Employer Dashboard
                     </Link>
-                  </li>
+              </li>
                 </>
               ) : (
                 <>
@@ -102,10 +102,10 @@ const Footer = () => {
                     <span className="text-foreground/50 cursor-not-allowed">
                       Post a Job
                     </span>
-                  </li>
-                  <li>
+              </li>
+              <li>
                     <span className="text-foreground/50 cursor-not-allowed">
-                      Employer Dashboard
+                  Employer Dashboard
                     </span>
                   </li>
                 </>

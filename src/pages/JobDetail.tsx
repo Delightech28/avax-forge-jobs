@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 // Using Express API instead of Supabase
 import { useAuth } from "@/hooks/useAuth";
 import { db } from '@/integrations/firebase/client';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -273,7 +273,10 @@ const JobDetail = () => {
                 )}
                 {job.token_compensation && (
                   <p className="flex items-center gap-1 text-lg text-primary font-medium">
-                    💎 {job.token_amount} {job.token_compensation}
+                    <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M12 2L13.09 8.26L20 9L13.09 9.74L12 16L10.91 9.74L4 9L10.91 8.26L12 2Z"/>
+                    </svg>
+                    {job.token_amount} {job.token_compensation}
                   </p>
                 )}
               </div>
@@ -375,53 +378,7 @@ const JobDetail = () => {
               </CardContent>
             </Card>
 
-            {/* Company Info */}
-            <Card>
-              <CardHeader>
-                <CardTitle>About {job.companies?.name}</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {job.companies?.description && (
-                  <p className="text-sm text-muted-foreground">
-                    {job.companies.description}
-                  </p>
-                )}
-                
-                <div className="space-y-2 text-sm">
-                  {job.companies?.industry && (
-                    <div>
-                      <span className="font-medium">Industry: </span>
-                      {job.companies.industry}
-                    </div>
-                  )}
-                  {job.companies?.size_range && (
-                    <div>
-                      <span className="font-medium">Company Size: </span>
-                      {job.companies.size_range} employees
-                    </div>
-                  )}
-                  {job.companies?.location && (
-                    <div>
-                      <span className="font-medium">Location: </span>
-                      {job.companies.location}
-                    </div>
-                  )}
-                </div>
 
-                {job.companies?.website_url && (
-                  <Button variant="outline" className="w-full" asChild>
-                    <a 
-                      href={job.companies.website_url} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                    >
-                      <ExternalLink className="h-4 w-4 mr-2" />
-                      Visit Website
-                    </a>
-                  </Button>
-                )}
-              </CardContent>
-            </Card>
           </div>
         </div>
       </main>

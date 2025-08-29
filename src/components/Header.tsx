@@ -2,11 +2,20 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
-import { Bell, User, LogOut, CheckCircle } from "lucide-react";
+import { Bell, User, LogOut, MessageSquare } from "lucide-react";
+import { useEffect, useState } from "react";
 
 const Header = () => {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
+  const [messageCount, setMessageCount] = useState(0);
+
+  useEffect(() => {
+    // Set mock unread message count for now
+    if (user) {
+      setMessageCount(3); // Mock data - replace with real Firestore query later
+    }
+  }, [user]);
 
   const handleAuthAction = () => {
     if (user) {
@@ -38,24 +47,40 @@ const Header = () => {
           </nav>
 
           {/* Right side actions */}
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-4">
             {user && (
-              <Button 
-                variant="ghost" 
-                size="icon"
-                onClick={() => navigate('/notifications')}
-                className="text-muted-foreground hover:text-foreground relative"
-              >
-                <Bell className="h-4 w-4" />
-                {(() => {
-                  const count = parseInt((typeof window !== 'undefined' && window.localStorage.getItem('unreadCount')) || '0', 10);
-                  return count > 0 ? (
-                    <div className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] leading-none rounded-full min-w-[14px] h-[14px] px-[3px] flex items-center justify-center">
-                      {count > 9 ? '9+' : count}
+              <>
+                <Button 
+                  variant="ghost" 
+                  size="icon"
+                  onClick={() => navigate('/notifications')}
+                  className="text-muted-foreground hover:text-foreground relative"
+                >
+                  <Bell className="h-4 w-4" />
+                  {(() => {
+                    const count = parseInt((typeof window !== 'undefined' && window.localStorage.getItem('unreadCount')) || '0', 10);
+                    return count > 0 ? (
+                      <div className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] leading-none rounded-full min-w-[14px] h-[14px] px-[3px] flex items-center justify-center">
+                        {count > 9 ? '9+' : count}
+                      </div>
+                    ) : null;
+                  })()}
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  size="icon"
+                  onClick={() => navigate('/messages')}
+                  className="text-muted-foreground hover:text-foreground relative"
+                  title="Messages"
+                >
+                  <MessageSquare className="h-4 w-4" />
+                  {messageCount > 0 && (
+                    <div className="absolute -top-1 -right-1 bg-blue-500 text-white text-[10px] leading-none rounded-full min-w-[14px] h-[14px] px-[3px] flex items-center justify-center">
+                      {messageCount > 9 ? '9+' : messageCount}
                     </div>
-                  ) : null;
-                })()}
-              </Button>
+                  )}
+                </Button>
+              </>
             )}
             
             {user ? (
