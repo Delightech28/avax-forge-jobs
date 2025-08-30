@@ -26,22 +26,20 @@ const PostJob = () => {
   const [newSkill, setNewSkill] = useState("");
 
   const [formData, setFormData] = useState({
-    title: "",
-    description: "",
-    company_name: user?.fullName || "",
-    job_type: "full_time",
-    location_type: "remote",
-    location: "",
-    salary_min: "",
-    salary_max: "",
-    salary_currency: "USD",
-    experience_level: "mid",
-    requirements: "",
-    benefits: "",
-    token_compensation: "",
-    token_amount: "",
-    requires_wallet: false,
-    expires_at: "",
+  title: "",
+  description: "",
+  job_type: "full_time",
+  location_type: "remote",
+  location: "",
+  salary_min: "",
+  salary_max: "",
+  salary_currency: "USD",
+  experience_level: "mid",
+  requirements: "",
+  benefits: "",
+  token_symbol: "",
+  requires_wallet: false,
+  expires_at: "",
   });
 
   useEffect(() => {
@@ -83,8 +81,8 @@ const PostJob = () => {
     // Enhanced validation
     const errors = [];
     
-    if (!formData.title || !formData.description || !formData.company_name) {
-      errors.push("Please fill in all required fields (title, description, company name)");
+    if (!formData.title || !formData.description) {
+      errors.push("Please fill in all required fields (title, description)");
     }
     
     if (skills.length === 0) {
@@ -99,7 +97,7 @@ const PostJob = () => {
       errors.push("Please select a currency");
     }
     
-    if (!formData.token_compensation) {
+    if (!formData.token_symbol) {
       errors.push("Please enter a token symbol");
     }
     // Token amount is optional - no validation required
@@ -123,7 +121,11 @@ const PostJob = () => {
         toast.error('Your company profile is not initialized. Please sign out and sign in again.');
         return;
       }
-      const userData: any = userSnap.data();
+      interface UserData {
+        role: string;
+        [key: string]: unknown;
+      }
+      const userData = userSnap.data() as UserData;
       console.log('[PostJob] preflight', { uid: user.id, roleFromDoc: userData?.role, userDocPath: `users/${user.id}` });
       if (userData.role !== 'company') {
         toast.error('Only verified companies can post jobs.');
@@ -131,15 +133,15 @@ const PostJob = () => {
       }
 
       const jobData = {
-        ...formData,
+  ...formData,
+  company_name: userData.companyName || "",
         posted_by: user?.id,
         salary_min: formData.salary_min ? parseInt(formData.salary_min) : null,
         salary_max: formData.salary_max ? parseInt(formData.salary_max) : null,
-        token_amount: formData.token_amount ? parseFloat(formData.token_amount) : null,
         skills,
         created_at: new Date().toISOString(),
         expires_at: formData.expires_at ? new Date(formData.expires_at).toISOString() : null,
-      } as any;
+      };
 
       const docRef = await addDoc(collection(db, 'jobs'), jobData);
       toast.success("Job posted successfully!");
@@ -147,12 +149,18 @@ const PostJob = () => {
     } catch (error) {
       console.error("Error posting job:", error);
       try {
-        const err: any = error;
+        const err = error as { code?: string; message?: string };
         console.log('[PostJob] Firestore error code:', err?.code, 'message:', err?.message);
-      } catch {}
-      const message = (error as any)?.code === 'permission-denied'
-        ? 'Insufficient permissions. Ensure you are signed in as a company and try again.'
-        : 'Failed to post job';
+      } catch {
+        // Intentionally left blank: error object may not be useful here
+      }
+      const message =
+        (typeof error === "object" &&
+          error !== null &&
+          "code" in error &&
+          (error as { code?: string }).code === "permission-denied")
+          ? 'Insufficient permissions. Ensure you are signed in as a company and try again.'
+          : 'Failed to post job';
       toast.error(message);
     } finally {
       setSubmitting(false);
@@ -258,15 +266,7 @@ const PostJob = () => {
                   </div>
 
                                      <div className="space-y-2">
-                     <Label htmlFor="company">Company *</Label>
-                     <Input
-                       id="company"
-                       value={formData.company_name}
-                       onChange={(e) => handleInputChange("company_name", e.target.value)}
-                       placeholder="Your company name"
-                       className="h-12 text-lg"
-                       required
-                     />
+                     {/* Company name field and label removed. Will be set from profile. */}
                    </div>
                 </div>
 
@@ -418,42 +418,39 @@ const PostJob = () => {
               </CardHeader>
               <CardContent className="pt-6 space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                  <div className="space-y-2">
-                  <Label htmlFor="salaryMin">Min Salary *</Label>
-                  <Input
-                    id="salaryMin"
-                    type="number"
-                    value={formData.salary_min}
-                    onChange={(e) => handleInputChange("salary_min", e.target.value)}
-                    placeholder="50000"
-                    className="h-12"
-                    required
-                  />
+                  <div className="space-y-2">
+                    <Label htmlFor="salaryMin">Min Salary *</Label>
+                    <Input
+                      id="salaryMin"
+                      type="number"
+                      value={formData.salary_min}
+                      onChange={(e) => handleInputChange("salary_min", e.target.value)}
+                      placeholder="50000"
+                      className="h-12"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="salaryMax">Max Salary *</Label>
+                    <Input
+                      id="salaryMax"
+                      type="number"
+                      value={formData.salary_max}
+                      onChange={(e) => handleInputChange("salary_max", e.target.value)}
+                      placeholder="80000"
+                      className="h-12"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="currency">Currency *</Label>
+                    <Input
+                      id="currency"
+                      value="USD"
+                      disabled
+                    />
+                  </div>
                 </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="salaryMax">Max Salary *</Label>
-                  <Input
-                    id="salaryMax"
-                    type="number"
-                    value={formData.salary_max}
-                    onChange={(e) => handleInputChange("salary_max", e.target.value)}
-                    placeholder="80000"
-                    className="h-12"
-                    required
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="currency">Currency *</Label>
-                  <Input
-                    id="currency"
-                    value="USD"
-                    disabled
-                  />
-                </div>
-                </div>
-
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <Label htmlFor="requirements">Requirements</Label>
@@ -465,7 +462,6 @@ const PostJob = () => {
                       rows={4}
                     />
                   </div>
-
                   <div className="space-y-2">
                     <Label htmlFor="benefits">Benefits</Label>
                     <Textarea
@@ -477,39 +473,17 @@ const PostJob = () => {
                     />
                   </div>
                 </div>
-
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <Label htmlFor="tokenCompensation">Token Symbol</Label>
                     <Input
                       id="tokenCompensation"
-                      value={formData.token_compensation}
-                      onChange={(e) => handleInputChange("token_compensation", e.target.value)}
+                      value={formData.token_symbol}
+                      onChange={(e) => handleInputChange("token_symbol", e.target.value)}
                       placeholder="e.g. AVAX"
-                      required
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="tokenAmount" className="flex items-center gap-2">
-                      Total compensation (Optional)
-                      <span 
-                        className="text-xs text-muted-foreground border px-1 rounded cursor-help"
-                        title="Total number of tokens offered as compensation (e.g., signing bonus or equity tokens). Optional field for additional token compensation."
-                      >?
-                      </span>
-                    </Label>
-                    <Input
-                      id="tokenAmount"
-                      type="number"
-                      step="0.01"
-                      value={formData.token_amount}
-                      onChange={(e) => handleInputChange("token_amount", e.target.value)}
-                      placeholder="1000"
                     />
                   </div>
                 </div>
-
                 <div className="flex items-center space-x-2">
                   <Switch
                     id="requiresWallet"

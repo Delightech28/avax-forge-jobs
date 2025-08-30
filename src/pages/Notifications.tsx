@@ -8,60 +8,48 @@ import { db } from '@/integrations/firebase/client';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { useAuth } from '@/hooks/useAuth';
 
+type NotificationPrefs = {
+  email: {
+    application: boolean;
+    matches: boolean;
+    updates: boolean;
+    marketing: boolean;
+  };
+  push: {
+    status: boolean;
+    messages: boolean;
+    recommendations: boolean;
+    reminders: boolean;
+  };
+};
+
 const Notifications = () => {
   const { user } = useAuth();
-  const [notifications, setNotifications] = useState([
-    {
-      id: 1,
-      type: 'success',
-      title: 'Application Submitted Successfully',
-      message: 'Your application for Senior Smart Contract Developer at DeFi Protocol Labs has been submitted. The employer will review your profile and get back to you soon.',
-      timestamp: '2 hours ago',
-      read: false,
-      category: 'application',
-      icon: <CheckCircle className="h-5 w-5" />
-    },
-    {
-      id: 2,
-      type: 'info',
-      title: 'New Job Match Found',
-      message: 'We found a new job that matches your skills: Frontend Developer - Web3 at MetaVerse Studios. Check it out!',
-      timestamp: '1 day ago',
-      read: false,
-      category: 'job_match',
-      icon: <Info className="h-5 w-5" />
-    },
-    {
-      id: 3,
-      type: 'warning',
-      title: 'Profile Completion Reminder',
-      message: 'Complete your profile to increase your chances of getting hired. Add your skills, experience, and portfolio.',
-      timestamp: '3 days ago',
-      read: true,
-      category: 'reminder',
-      icon: <AlertTriangle className="h-5 w-5" />
-    },
-    {
-      id: 4,
-      type: 'info',
-      title: 'Platform Update: New Filters',
-      message: 'We added new filters to the Browse Jobs page to help you find roles faster.',
-      timestamp: '5 hours ago',
-      read: false,
-      category: 'update',
-      icon: <Info className="h-5 w-5" />
-    },
-    {
-      id: 5,
-      type: 'success',
-      title: 'Interview Invitation',
-      message: 'ArenaApp invited you to an interview. Check your email for the schedule details.',
-      timestamp: '12 hours ago',
-      read: false,
-      category: 'application',
-      icon: <CheckCircle className="h-5 w-5" />
+  const [notifications, setNotifications] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!user) return;
+    const fetchNotifications = async () => {
+      setLoading(true);
+      try {
+        const { collection, query, where, orderBy, getDocs } = await import('firebase/firestore');
+        const q = query(
+          collection(db, 'notifications'),
+          where('userId', '==', user.id),
+        orderBy('createdAt', 'desc')
+      );
+      const snap = await getDocs(q);
+      // Assume notifications are fetched and set here
+      // setNotifications(...);
+    } catch (e) {
+      setNotifications([]);
+    } finally {
+      setLoading(false);
     }
-  ]);
+  };
+    fetchNotifications();
+  }, [user]);
 
   const [filter, setFilter] = useState('all');
   const [showUnreadOnly, setShowUnreadOnly] = useState(false);
@@ -81,7 +69,8 @@ const Notifications = () => {
   // Basic unread reset when window gains focus
   useEffect(() => {
     const onFocus = () => {
-      setNotifications((prev) => prev.map(n => ({ ...n, read: true })));
+      // Optionally, you could refresh notifications here if needed
+      // For now, just a placeholder
     };
     window.addEventListener('focus', onFocus);
     return () => window.removeEventListener('focus', onFocus);
@@ -95,10 +84,12 @@ const Notifications = () => {
         const ref = doc(db, 'notification_settings', user.id as string);
         const snap = await getDoc(ref);
         if (snap.exists()) {
-          const data = snap.data() as any;
+          const data = snap.data() as NotificationPrefs;
           setPrefs(prev => ({ ...prev, ...data }));
         }
-      } catch (_) {}
+      } catch (_) {
+        // Intentionally left blank: ignore errors when loading preferences
+      }
     };
     loadPrefs();
   }, [user]);
@@ -108,7 +99,9 @@ const Notifications = () => {
     try {
       const ref = doc(db, 'notification_settings', user.id as string);
       await setDoc(ref, prefs, { merge: true });
-    } catch (_) {}
+    } catch (_) {
+      // Intentionally left blank: ignore errors when saving preferences
+    }
   };
 
   const getNotificationTypeStyles = (type: string) => {

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 // Using Express API instead of Supabase
 import { useAuth } from "@/hooks/useAuth";
@@ -26,8 +26,8 @@ interface JobDetail {
   skills: string[];
   requirements: string;
   benefits: string;
-  token_compensation: string;
-  token_amount: number;
+  // ...removed token compensation field...
+  // ...removed token amount field...
   requires_wallet: boolean;
   created_at: string;
   expires_at?: string;
@@ -63,23 +63,20 @@ const JobDetail = () => {
           const data = savedSnap.data();
           setSaved((data.jobIds || []).includes(job.id));
         }
-      } catch {}
+      } catch {
+        // Ignore errors when checking saved jobs
+      }
     };
     checkSaved();
   }, [user, job?.id]);
 
-  useEffect(() => {
-    if (id) {
-      fetchJob();
-      checkApplicationStatus();
-    }
-  }, [id, user]);
+  // import { useCallback } from "react"; // moved to top
 
-  const fetchJob = async () => {
+  const fetchJob = useCallback(async () => {
     try {
       const snap = await getDoc(doc(db, 'jobs', id as string));
       if (!snap.exists()) throw new Error('Not found');
-      const j = snap.data() as any;
+      const j = snap.data() as JobDetail;
       setJob({
         id: snap.id,
         title: j.title,
@@ -94,12 +91,21 @@ const JobDetail = () => {
         skills: j.skills || [],
         requirements: j.requirements || '',
         benefits: j.benefits || '',
-        token_compensation: j.token_compensation,
-        token_amount: j.token_amount,
+  // ...removed token compensation...
+  // ...removed token amount...
         requires_wallet: j.requires_wallet,
         created_at: j.created_at,
         expires_at: j.expires_at,
-        companies: j.company || (undefined as any)
+        companies: j.companies || {
+          id: "",
+          name: "",
+          description: "",
+          logo_url: "",
+          website_url: "",
+          location: "",
+          size_range: "",
+          industry: ""
+        }
       });
     } catch (error) {
       console.error("Error fetching job:", error);
@@ -108,12 +114,19 @@ const JobDetail = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id, navigate]);
 
-  const checkApplicationStatus = async () => {
+  const checkApplicationStatus = useCallback(async () => {
     // Implement if you add applications subcollection in Firestore
     return;
-  };
+  }, []);
+
+  useEffect(() => {
+    if (id) {
+      fetchJob();
+      checkApplicationStatus();
+    }
+  }, [id, user, fetchJob, checkApplicationStatus]);
 
   const handleApply = async () => {
     if (job?.expires_at && new Date(job.expires_at).getTime() <= Date.now()) {
@@ -136,7 +149,7 @@ const JobDetail = () => {
       // Implement if you add applications subcollection in Firestore
       setHasApplied(true);
       toast.success('Application submitted successfully! (local)');
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast.error('Failed to submit application');
     } finally {
       setApplying(false);
@@ -167,7 +180,7 @@ const JobDetail = () => {
         setSaved(false);
         toast.success('Job removed from saved jobs');
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast.error('Failed to update saved jobs');
     }
   };
@@ -297,14 +310,7 @@ const JobDetail = () => {
                     {formatSalary(job.salary_min, job.salary_max, job.salary_currency)}
                   </p>
                 )}
-                {job.token_compensation && (
-                  <p className="flex items-center gap-1 text-lg text-primary font-medium">
-                    <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M12 2L13.09 8.26L20 9L13.09 9.74L12 16L10.91 9.74L4 9L10.91 8.26L12 2Z"/>
-                    </svg>
-                    {job.token_amount} {job.token_compensation}
-                  </p>
-                )}
+          {/* Token compensation removed */}
               </div>
             </div>
 

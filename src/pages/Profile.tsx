@@ -236,13 +236,20 @@ const Profile = () => {
                 <div className="flex items-center gap-3 mb-2">
                   <h1 className="text-3xl font-bold flex items-center gap-2">
                     {user.role === 'company' ? (profileData.companyName || 'ArenaApp') : profileData.fullName}
-                    <span className="flex items-center gap-1">
-                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="#2563eb" className="w-4 h-4">
-                        <circle cx="12" cy="12" r="10" stroke="#2563eb" strokeWidth="2" fill="#fff" />
-                        <path strokeLinecap="round" strokeLinejoin="round" stroke="#2563eb" strokeWidth="2" d="M9 12l2 2 4-4" />
-                      </svg>
-                      <span className="text-blue-600 font-medium text-xs">Get Verified</span>
-                    </span>
+                    {user.role !== 'company' && (
+                      <button
+                        className="flex items-center gap-1 focus:outline-none border border-blue-600 rounded-full px-3 py-1 bg-white hover:bg-blue-50 transition"
+                        onClick={() => navigate('/get-verified')}
+                        type="button"
+                        aria-label="Get Verified"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="#2563eb" className="w-4 h-4">
+                          <circle cx="12" cy="12" r="10" stroke="#2563eb" strokeWidth="2" fill="#fff" />
+                          <path strokeLinecap="round" strokeLinejoin="round" stroke="#2563eb" strokeWidth="2" d="M9 12l2 2 4-4" />
+                        </svg>
+                        <span className="text-blue-600 font-medium text-xs">Get Verified</span>
+                      </button>
+                    )}
                   </h1>
                 </div>
                 {user.role === 'company' ? (

@@ -482,7 +482,7 @@ const Settings = () => {
     return (
       <div className="min-h-screen bg-background">
         <Header />
-        <main className="container mx-auto px-4 py-8">
+  <main className="container mx-auto px-4 py-8 max-w-md">
           <div className="text-center py-12">
             <SettingsIcon className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
             <h3 className="text-lg font-semibold mb-2">Sign in to access settings</h3>
@@ -497,7 +497,7 @@ const Settings = () => {
     <div className="min-h-screen bg-background">
       <Header />
       
-      <main className="container mx-auto px-4 py-8">
+  <main className="container mx-auto px-4 py-8 max-w-md">
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2">Settings</h1>
           <p className="text-muted-foreground">Manage your account settings and preferences</p>
@@ -516,7 +516,7 @@ const Settings = () => {
                 Manage your profile details and settings
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-4 max-w-xs mx-auto">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">Profile Settings</span>
                 <Button
@@ -660,7 +660,7 @@ const Settings = () => {
                 Add your technical skills and expertise
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-4 max-w-xs mx-auto">
               {editing && (
                 <div className="flex gap-2">
                   <Input
@@ -706,7 +706,7 @@ const Settings = () => {
                 Add your work experience and achievements
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-4 max-w-xs mx-auto">
               {editing && (
                 <div className="space-y-3 p-4 border rounded-lg">
                   <Input
@@ -776,7 +776,7 @@ const Settings = () => {
                 Add your educational background
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-4 max-w-xs mx-auto">
               {editing && (
                 <div className="space-y-3 p-4 border rounded-lg">
                   <Input
@@ -857,7 +857,7 @@ const Settings = () => {
                 Manage your company information and branding
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-4 max-w-xs mx-auto">
               {/* Avatar Upload for Company */}
               <div className="flex items-center gap-4">
                 <Avatar className="w-16 h-16">
@@ -1077,7 +1077,7 @@ const Settings = () => {
                   Connect your wallet to apply for Web3 jobs and receive payments
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-4 max-w-xs mx-auto">
                 <div className="flex items-center justify-between p-4 border rounded-lg">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 bg-gradient-to-r from-primary/20 to-primary-glow/20 rounded-lg flex items-center justify-center">

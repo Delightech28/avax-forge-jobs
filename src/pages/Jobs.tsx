@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import JobCard from "@/components/JobCard";
 import { useSearchParams } from "react-router-dom";
 // Using Express API instead of Supabase
@@ -51,26 +51,20 @@ const Jobs = () => {
   const [experienceLevel, setExperienceLevel] = useState(searchParams.get("experience") || "");
   const [savedJobs, setSavedJobs] = useState<Set<string>>(new Set());
 
-  useEffect(() => {
-    fetchJobs();
-    if (user) {
-      fetchSavedJobs();
-    }
-  }, [searchParams, user]);
 
-  const fetchJobs = async () => {
+  // Memoized fetchJobs
+  const fetchJobs = useCallback(async () => {
     setLoading(true);
     try {
       const jobsCol = collection(db, 'jobs');
-      const filters: any[] = [];
-      // Basic filtering example; for complex search you'd use Algolia/Meilisearch
+      const filters: import('firebase/firestore').QueryConstraint[] = [];
       if (jobType && jobType !== 'all') filters.push(where('job_type', '==', jobType));
       if (locationType && locationType !== 'all') filters.push(where('location_type', '==', locationType));
       if (experienceLevel && experienceLevel !== 'all') filters.push(where('experience_level', '==', experienceLevel));
       const qy = filters.length ? query(jobsCol, ...filters) : query(jobsCol);
       const snap = await getDocs(qy);
       const list = snap.docs.map((d) => {
-        const j = d.data() as any;
+        const j = d.data() as Job;
         return {
           id: d.id,
           title: j.title,
@@ -91,31 +85,30 @@ const Jobs = () => {
           company_name: j.company_name || undefined,
         } as Job;
       });
-      // Simple client-side text search
       const now = Date.now();
       const notExpired = list.filter((j) => !j.expires_at || new Date(j.expires_at).getTime() > now);
       const filtered = searchTerm
         ? notExpired.filter((j) =>
             [j.title, j.description, j.location, j.company_name]
               .filter(Boolean)
-              .some((t: any) => String(t).toLowerCase().includes(searchTerm.toLowerCase()))
+              .some((t: string | undefined) => String(t).toLowerCase().includes(searchTerm.toLowerCase()))
           )
         : notExpired;
       setJobs(filtered);
     } catch (error) {
       console.error("Error fetching jobs:", error);
-      // Don't show error toast for empty collections - this is normal
       if (error instanceof Error && error.message.includes('Missing or insufficient permissions')) {
         console.log('No jobs found or permissions issue - this is normal for new installations');
       } else {
-      toast.error("Failed to fetch jobs");
+        toast.error("Failed to fetch jobs");
       }
     } finally {
       setLoading(false);
     }
-  };
+  }, [jobType, locationType, experienceLevel, searchTerm]);
 
-  const fetchSavedJobs = async () => {
+  // Fetch saved jobs (must be declared before use in useEffect)
+  const fetchSavedJobs = useCallback(async () => {
     if (!user) return;
     try {
       const savedRef = doc(db, 'users', user.id as string, 'saved_jobs', 'list');
@@ -127,7 +120,15 @@ const Jobs = () => {
     } catch (error) {
       console.error('Error fetching saved jobs:', error);
     }
-  };
+  }, [user]);
+
+  // Auto-apply filters and search
+  useEffect(() => {
+    fetchJobs();
+    if (user) {
+      fetchSavedJobs();
+    }
+  }, [searchTerm, jobType, locationType, experienceLevel, user, fetchJobs, fetchSavedJobs]);
 
   const saveJob = async (jobId: string) => {
     if (!user) {
@@ -328,6 +329,5 @@ const Jobs = () => {
       </main>
     </div>
   );
-};
-
+}
 export default Jobs;

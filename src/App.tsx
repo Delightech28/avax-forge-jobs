@@ -17,6 +17,7 @@ import TermsOfService from "./pages/TermsOfService";
 import Contact from "./pages/Contact";
 import Notifications from "./pages/Notifications";
 import Messages from "./pages/Messages";
+import GetVerified from "./pages/GetVerified";
 
 // Scroll to top on route change
 const ScrollToTop = () => {
@@ -51,6 +52,7 @@ function App() {
         <Route path="/contact" element={<Contact />} />
         <Route path="/notifications" element={<Notifications />} />
         <Route path="/messages" element={<Messages />} />
+        <Route path="/get-verified" element={<GetVerified />} />
       </Routes>
       <Toaster />
     </Router>

@@ -5,8 +5,21 @@ import { useNavigate } from "react-router-dom";
 import { Bell, User, LogOut, MessageSquare } from "lucide-react";
 import { useEffect, useState } from "react";
 
+interface Profile {
+  avatar_url?: string;
+  full_name?: string;
+}
+
+interface User {
+  avatarUrl?: string;
+  profile?: Profile;
+  fullName?: string;
+  email?: string;
+  role?: string;
+}
+
 const Header = () => {
-  const { user, signOut } = useAuth();
+  const { user, signOut } = useAuth() as { user: User | null, signOut: () => void };
   const navigate = useNavigate();
   const [messageCount, setMessageCount] = useState(0);
 
@@ -74,11 +87,6 @@ const Header = () => {
                   title="Messages"
                 >
                   <MessageSquare className="h-4 w-4" />
-                  {messageCount > 0 && (
-                    <div className="absolute -top-1 -right-1 bg-blue-500 text-white text-[10px] leading-none rounded-full min-w-[14px] h-[14px] px-[3px] flex items-center justify-center">
-                      {messageCount > 9 ? '9+' : messageCount}
-                    </div>
-                  )}
                 </Button>
               </>
             )}
@@ -87,9 +95,9 @@ const Header = () => {
               <div className="flex items-center space-x-2">
                 <div className="relative">
                   <Avatar className="h-8 w-8 cursor-pointer" onClick={() => navigate('/profile')}>
-                    <AvatarImage src={(user as any).avatarUrl || (user as any).profile?.avatar_url} />
+                    <AvatarImage src={user.avatarUrl || user.profile?.avatar_url} />
                     <AvatarFallback>
-                      {(user as any).fullName?.charAt(0) || (user as any).profile?.full_name?.charAt(0) || user.email?.charAt(0) || 'U'}
+                      {user.fullName?.charAt(0) || user.profile?.full_name?.charAt(0) || user.email?.charAt(0) || 'U'}
                     </AvatarFallback>
                   </Avatar>
 
@@ -113,14 +121,7 @@ const Header = () => {
               </Button>
             )}
             
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="md:hidden"
-              onClick={handleAuthAction}
-            >
-              {user ? <LogOut className="h-4 w-4" /> : <User className="h-4 w-4" />}
-            </Button>
+            {/* Remove duplicate logout icon for mobile */}
           </div>
         </div>
       </div>

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { db } from '@/integrations/firebase/client';
 import { collection, getDocs, query, where, doc, getDoc, setDoc } from 'firebase/firestore';
@@ -40,15 +40,9 @@ const SavedJobs = () => {
   const [loading, setLoading] = useState(true);
   const [savedJobIds, setSavedJobIds] = useState<Set<string>>(new Set());
 
-  useEffect(() => {
-    if (user) {
-      fetchSavedJobs();
-    } else {
-      setLoading(false);
-    }
-  }, [user]);
+  // import { useCallback } from "react"; // Moved to top
 
-  const fetchSavedJobs = async () => {
+  const fetchSavedJobs = useCallback(async () => {
     if (!user) return;
     
     setLoading(true);
@@ -82,7 +76,7 @@ const SavedJobs = () => {
           const jobSnap = await getDoc(jobRef);
           
           if (jobSnap.exists()) {
-            const jobData = jobSnap.data() as any;
+            const jobData = jobSnap.data() as Job;
             jobsData.push({
               id: jobSnap.id,
               title: jobData.title,
@@ -100,7 +94,7 @@ const SavedJobs = () => {
               requires_wallet: jobData.requires_wallet,
               created_at: jobData.created_at,
               expires_at: jobData.expires_at,
-              companies: jobData.company || undefined,
+              companies: jobData.companies || undefined,
             });
           }
         } catch (error) {
@@ -115,7 +109,15 @@ const SavedJobs = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
+
+  useEffect(() => {
+    if (user) {
+      fetchSavedJobs();
+    } else {
+      setLoading(false);
+    }
+  }, [user, fetchSavedJobs]);
 
   const removeFromSaved = async (jobId: string) => {
     if (!user) return;
@@ -289,14 +291,7 @@ const SavedJobs = () => {
                             {formatSalary(job.salary_min, job.salary_max, job.salary_currency)}
                           </p>
                         )}
-                      {job.token_compensation && (
-                        <p className="flex items-center gap-1 text-sm text-primary">
-                          <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M12 2L13.09 8.26L20 9L13.09 9.74L12 16L10.91 9.74L4 9L10.91 8.26L12 2Z"/>
-                          </svg>
-                          {job.token_amount} {job.token_compensation}
-                        </p>
-                      )}
+                      {/* Token compensation removed */}
                       </div>
                       <p className="flex items-center gap-1 text-sm text-muted-foreground">
                         <Clock className="h-4 w-4" />
