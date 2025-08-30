@@ -51,6 +51,22 @@ const JobDetail = () => {
   const [loading, setLoading] = useState(true);
   const [applying, setApplying] = useState(false);
   const [hasApplied, setHasApplied] = useState(false);
+  const [saved, setSaved] = useState(false);
+  // Check if job is already saved
+  useEffect(() => {
+    const checkSaved = async () => {
+      if (!user || !job?.id) return;
+      try {
+        const savedRef = doc(db, 'users', user.id as string, 'saved_jobs', 'list');
+        const savedSnap = await getDoc(savedRef);
+        if (savedSnap.exists()) {
+          const data = savedSnap.data();
+          setSaved((data.jobIds || []).includes(job.id));
+        }
+      } catch {}
+    };
+    checkSaved();
+  }, [user, job?.id]);
 
   useEffect(() => {
     if (id) {
@@ -128,32 +144,41 @@ const JobDetail = () => {
   };
 
   const saveJob = async () => {
-    if (!user) {
+    if (!user || !job?.id) {
       toast.error("Please sign in to save jobs");
       return;
     }
-
     try {
-      // Implement saved jobs collection later
-      toast.success('Job saved successfully! (local)');
+      const savedRef = doc(db, 'users', user.id as string, 'saved_jobs', 'list');
+      const savedSnap = await getDoc(savedRef);
+      let jobIds = [];
+      if (savedSnap.exists()) {
+        jobIds = savedSnap.data().jobIds || [];
+      }
+      if (!saved) {
+        // Save job
+        await setDoc(savedRef, { jobIds: [...jobIds, job.id] }, { merge: true });
+        setSaved(true);
+        toast.success('Job saved successfully!');
+      } else {
+        // Unsave job
+        const updatedJobIds = jobIds.filter((jid: string) => jid !== job.id);
+        await setDoc(savedRef, { jobIds: updatedJobIds }, { merge: true });
+        setSaved(false);
+        toast.success('Job removed from saved jobs');
+      }
     } catch (error: any) {
-      toast.error('Failed to save job');
+      toast.error('Failed to update saved jobs');
     }
   };
 
   const formatSalary = (min: number, max: number, currency: string) => {
     if (!min && !max) return "Salary not specified";
-    const formatter = new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: currency || "USD",
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    });
-
+    // Only show the numbers, no currency except USD
     if (min && max) {
-      return `${formatter.format(min)} - ${formatter.format(max)}`;
+      return `${min} - ${max}`;
     }
-    return formatter.format(min || max);
+    return `${min || max}`;
   };
 
   if (loading) {
@@ -208,7 +233,7 @@ const JobDetail = () => {
           Back to Jobs
         </Button>
 
-        <div className="grid lg:grid-cols-3 gap-8">
+  <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Main Content */}
           <div className="lg:col-span-2 space-y-6">
             {/* Job Header */}
@@ -222,9 +247,9 @@ const JobDetail = () => {
                     )}
                   </h1>
                   <div className="flex items-center gap-4 text-lg text-muted-foreground">
-                    <span className="font-medium text-foreground">{job.companies?.name}</span>
+                    <span className="font-medium text-foreground text-base lg:text-lg">{job.companies?.name}</span>
                     {job.companies?.location && (
-                      <span className="flex items-center gap-1">
+                      <span className="flex items-center gap-1 text-sm lg:text-base">
                         <MapPin className="h-4 w-4" />
                         {job.companies.location}
                       </span>
@@ -235,9 +260,10 @@ const JobDetail = () => {
                   variant="ghost"
                   size="icon"
                   onClick={saveJob}
-                  className="text-muted-foreground hover:text-foreground"
+                  className={saved ? "text-red-500" : "text-muted-foreground hover:text-foreground"}
+                  aria-label={saved ? "Saved" : "Save Job"}
                 >
-                  <Heart className="h-5 w-5" />
+                  <Heart className={`h-5 w-5 ${saved ? "fill-current text-red-500" : ""}`} />
                 </Button>
               </div>
 
@@ -369,11 +395,11 @@ const JobDetail = () => {
                 <Button 
                   variant="outline" 
                   onClick={saveJob}
-                  className="w-full"
+                  className={`w-full ${saved ? "border-red-500 text-red-500" : ""}`}
                   title={job.requires_wallet && !user?.walletAddress ? 'This job requires a connected Web3 wallet.' : undefined}
                 >
-                  <Heart className="h-4 w-4 mr-2" />
-                  Save Job
+                  <Heart className={`h-4 w-4 mr-2 ${saved ? "fill-current text-red-500" : ""}`} />
+                  {saved ? "Saved" : "Save Job"}
                 </Button>
               </CardContent>
             </Card>

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import JobCard from "@/components/JobCard";
 import { useSearchParams } from "react-router-dom";
 // Using Express API instead of Supabase
 import { useAuth } from "@/hooks/useAuth";
@@ -30,12 +31,13 @@ interface Job {
   requires_wallet: boolean;
   created_at: string;
   expires_at?: string;
-  companies: {
-    id: string;
-    name: string;
-    logo_url: string;
-    location: string;
-  };
+  company_name?: string;
+  // companies: {
+  //   id: string;
+  //   name: string;
+  //   logo_url: string;
+  //   location: string;
+  // };
 }
 
 const Jobs = () => {
@@ -86,7 +88,7 @@ const Jobs = () => {
           requires_wallet: j.requires_wallet,
           created_at: j.created_at,
           expires_at: j.expires_at,
-          companies: j.company || undefined,
+          company_name: j.company_name || undefined,
         } as Job;
       });
       // Simple client-side text search
@@ -94,7 +96,7 @@ const Jobs = () => {
       const notExpired = list.filter((j) => !j.expires_at || new Date(j.expires_at).getTime() > now);
       const filtered = searchTerm
         ? notExpired.filter((j) =>
-            [j.title, j.description, j.location, j.companies?.name]
+            [j.title, j.description, j.location, j.company_name]
               .filter(Boolean)
               .some((t: any) => String(t).toLowerCase().includes(searchTerm.toLowerCase()))
           )
@@ -168,17 +170,27 @@ const Jobs = () => {
 
   const formatSalary = (min: number, max: number, currency: string) => {
     if (!min && !max) return "Salary not specified";
-    const formatter = new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: currency || "USD",
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    });
-
+    // Only show the numbers, no currency
     if (min && max) {
-      return `${formatter.format(min)} - ${formatter.format(max)}`;
+      return `${min} - ${max}`;
     }
-    return formatter.format(min || max);
+    return `${min || max}`;
+  };
+
+  // Format posted time
+  const formatPostedAt = (created_at: string) => {
+    if (!created_at) return "";
+    const now = Date.now();
+    const created = new Date(created_at).getTime();
+    const diffMs = now - created;
+    const diffSec = Math.floor(diffMs / 1000);
+    if (diffSec < 60) return "just now";
+    const diffMin = Math.floor(diffSec / 60);
+    if (diffMin < 60) return `${diffMin} min${diffMin > 1 ? "s" : ""} ago`;
+    const diffHr = Math.floor(diffMin / 60);
+    if (diffHr < 24) return `${diffHr} hr${diffHr > 1 ? "s" : ""} ago`;
+    const diffDay = Math.floor(diffHr / 24);
+    return `${diffDay} day${diffDay > 1 ? "s" : ""} ago`;
   };
 
   return (
@@ -270,7 +282,7 @@ const Jobs = () => {
         </div>
 
         {/* Job Listings */}
-        <div className="grid gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {loading ? (
             Array.from({ length: 6 }).map((_, i) => (
               <Card key={i} className="animate-pulse">
@@ -294,103 +306,22 @@ const Jobs = () => {
             </div>
           ) : (
             jobs.map((job) => (
-              <Card key={job.id} className="hover:shadow-lg transition-shadow">
-                <CardHeader>
-                  <div className="flex justify-between items-start">
-                    <div className="flex-1">
-                      <CardTitle className="text-xl mb-2">{job.title}</CardTitle>
-                      <CardDescription className="flex items-center gap-4 text-base">
-                        <span className="font-medium">{job.companies?.name}</span>
-                        {job.companies?.location && (
-                          <span className="flex items-center gap-1">
-                            <MapPin className="h-4 w-4" />
-                            {job.companies.location}
-                          </span>
-                        )}
-                      </CardDescription>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => saveJob(job.id)}
-                      className={`hover:text-foreground transition-colors ${
-                        savedJobs.has(job.id) 
-                          ? 'text-red-500 hover:text-red-600' 
-                          : 'text-muted-foreground'
-                      }`}
-                    >
-                      <Heart className={`h-4 w-4 ${savedJobs.has(job.id) ? 'fill-current' : ''}`} />
-                    </Button>
-                  </div>
-                </CardHeader>
-
-                <CardContent className="space-y-4">
-                  <p className="text-muted-foreground line-clamp-2">{job.description}</p>
-
-                  <div className="flex flex-wrap gap-2">
-                    <Badge variant="secondary" className="flex items-center gap-1">
-                      <Briefcase className="h-3 w-3" />
-                      {job.job_type.replace("_", " ")}
-                    </Badge>
-                    <Badge variant="outline" className="flex items-center gap-1">
-                      <MapPin className="h-3 w-3" />
-                      {job.location_type.replace("_", " ")}
-                    </Badge>
-                    <Badge variant="outline">
-                      {job.experience_level} level
-                    </Badge>
-                    {job.requires_wallet && (
-                      <Badge variant="outline" className="border-primary text-primary" title="Wallet connection required to apply">
-                        Wallet Required
-                      </Badge>
-                    )}
-                  </div>
-
-                  {job.skills && job.skills.length > 0 && (
-                    <div className="flex flex-wrap gap-1">
-                      {job.skills.slice(0, 5).map((skill, index) => (
-                        <Badge key={index} variant="outline" className="text-xs">
-                          {skill}
-                        </Badge>
-                      ))}
-                      {job.skills.length > 5 && (
-                        <Badge variant="outline" className="text-xs">
-                          +{job.skills.length - 5} more
-                        </Badge>
-                      )}
-                    </div>
-                  )}
-
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-1">
-                      {(job.salary_min || job.salary_max) && (
-                        <p className="flex items-center gap-1 text-sm font-medium">
-                          <DollarSign className="h-4 w-4" />
-                          {formatSalary(job.salary_min, job.salary_max, job.salary_currency)}
-                        </p>
-                      )}
-                      {job.token_compensation && (
-                        <p className="flex items-center gap-1 text-sm text-primary">
-                          <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M12 2L13.09 8.26L20 9L13.09 9.74L12 16L10.91 9.74L4 9L10.91 8.26L12 2Z"/>
-                          </svg>
-                          {job.token_amount} {job.token_compensation}
-                        </p>
-                      )}
-                    </div>
-                    <p className="flex items-center gap-1 text-sm text-muted-foreground">
-                      <Clock className="h-4 w-4" />
-                      {new Date(job.created_at).toLocaleDateString()}
-                    </p>
-                  </div>
-                </CardContent>
-
-                <CardFooter>
-                  <Button asChild className="w-full">
-                    <a href={`/jobs/${job.id}`}>View Details</a>
-                  </Button>
-                </CardFooter>
-              </Card>
+              <JobCard
+                key={job.id}
+                job={{
+                  id: job.id,
+                  title: job.title,
+                  company: job.company_name || "",
+                  location: job.location,
+                  type: job.job_type.replace("_", " "),
+                  salary: formatSalary(job.salary_min, job.salary_max, job.salary_currency),
+                  postedAt: formatPostedAt(job.created_at),
+                  isVerified: true,
+                  tags: job.skills || [],
+                  description: job.description,
+                 // logo_url: job.companies?.logo_url,
+                }}
+              />
             ))
           )}
         </div>

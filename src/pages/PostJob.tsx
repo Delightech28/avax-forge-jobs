@@ -99,6 +99,9 @@ const PostJob = () => {
       errors.push("Please select a currency");
     }
     
+    if (!formData.token_compensation) {
+      errors.push("Please enter a token symbol");
+    }
     // Token amount is optional - no validation required
     
     if (errors.length > 0) {
@@ -443,20 +446,11 @@ const PostJob = () => {
 
                 <div className="space-y-2">
                   <Label htmlFor="currency">Currency *</Label>
-                  <Select 
-                    value={formData.salary_currency} 
-                    onValueChange={(value) => handleInputChange("salary_currency", value)}
-                  >
-                    <SelectTrigger className="h-12">
-                      <SelectValue placeholder="Select currency" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="USD">USD</SelectItem>
-                      <SelectItem value="EUR">EUR</SelectItem>
-                      <SelectItem value="GBP">GBP</SelectItem>
-                      <SelectItem value="CAD">CAD</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <Input
+                    id="currency"
+                    value="USD"
+                    disabled
+                  />
                 </div>
                 </div>
 
@@ -491,13 +485,14 @@ const PostJob = () => {
                       id="tokenCompensation"
                       value={formData.token_compensation}
                       onChange={(e) => handleInputChange("token_compensation", e.target.value)}
-                      placeholder="e.g. AVAX, ETH"
+                      placeholder="e.g. AVAX"
+                      required
                     />
                   </div>
 
                   <div className="space-y-2">
                     <Label htmlFor="tokenAmount" className="flex items-center gap-2">
-                      Token Amount (Optional)
+                      Total compensation (Optional)
                       <span 
                         className="text-xs text-muted-foreground border px-1 rounded cursor-help"
                         title="Total number of tokens offered as compensation (e.g., signing bonus or equity tokens). Optional field for additional token compensation."

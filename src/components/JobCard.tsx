@@ -15,7 +15,9 @@ interface JobCardProps {
     isVerified: boolean;
     tags: string[];
     description: string;
+    logo_url?: string;
   };
+  isFeatured?: boolean;
 }
 
 const JobCard = ({ job, isFeatured = false }: JobCardProps) => {
@@ -24,20 +26,25 @@ const JobCard = ({ job, isFeatured = false }: JobCardProps) => {
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
           <div className="flex items-center space-x-3">
-            <div className="w-12 h-12 bg-gradient-to-r from-primary/20 to-primary-glow/20 rounded-lg flex items-center justify-center">
-              <Building className="h-6 w-6 text-primary" />
+            <div className="w-12 h-12 bg-gradient-to-r from-primary/20 to-primary-glow/20 rounded-lg flex items-center justify-center overflow-hidden">
+              {job.logo_url ? (
+                <img src={job.logo_url} alt={job.company} className="w-full h-full object-cover rounded-lg" />
+              ) : (
+                <Building className="h-6 w-6 text-primary" />
+              )}
             </div>
             <div>
               <h3 className="font-semibold text-lg group-hover:text-primary transition-colors">
                 {job.title}
               </h3>
-              <div className="flex items-center space-x-2">
-                <p className="text-foreground/70">{job.company}</p>
+              <div className="flex items-center gap-2">
+                <span className="text-muted-foreground text-sm">Posted by</span>
+                <span className="text-foreground/70 text-sm font-medium">{job.company}</span>
                 {job.isVerified && (
-                  <div className="flex items-center">
+                  <span className="flex items-center gap-1">
                     <Shield className="h-4 w-4 text-primary" />
-                    <span className="text-xs text-primary ml-1">Verified</span>
-                  </div>
+                    <span className="text-xs text-primary">Verified</span>
+                  </span>
                 )}
               </div>
             </div>
@@ -47,7 +54,6 @@ const JobCard = ({ job, isFeatured = false }: JobCardProps) => {
 
       <CardContent className="pb-4">
         <p className="text-foreground/80 mb-4 line-clamp-2">{job.description}</p>
-        
         <div className="flex flex-wrap gap-2 mb-4">
           {job.tags.map((tag) => (
             <Badge key={tag} variant="secondary" className="text-xs">
@@ -55,7 +61,6 @@ const JobCard = ({ job, isFeatured = false }: JobCardProps) => {
             </Badge>
           ))}
         </div>
-
         <div className="grid grid-cols-2 gap-4 text-sm text-foreground/70">
           <div className="flex items-center">
             <MapPin className="h-4 w-4 mr-2" />
@@ -67,7 +72,8 @@ const JobCard = ({ job, isFeatured = false }: JobCardProps) => {
           </div>
           <div className="flex items-center">
             <DollarSign className="h-4 w-4 mr-2" />
-            {job.salary}
+            {/* Remove currency symbol, just show amount/range */}
+            {job.salary.replace(/\$|USD|EUR|GBP|CAD/gi, "").trim()}
           </div>
           <div className="flex items-center">
             <Clock className="h-4 w-4 mr-2" />
@@ -78,14 +84,7 @@ const JobCard = ({ job, isFeatured = false }: JobCardProps) => {
 
       <CardFooter className="pt-0">
         <div className="flex w-full gap-3">
-          <Button
-            variant="outline"
-            className="flex-1"
-            asChild
-            disabled={isFeatured}
-          >
-            <a href={isFeatured ? undefined : `/jobs/${job.id}`}>View Details</a>
-          </Button>
+          {/* Remove View Details button, keep only Apply Now */}
           <Button
             variant="default"
             className="flex-1"
