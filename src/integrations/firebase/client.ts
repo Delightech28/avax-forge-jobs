@@ -8,7 +8,7 @@ const firebaseConfig = {
   apiKey: "AIzaSyAItxB-jOUvk76SaBl_d2c9HkmlTko090A",
   authDomain: "avax-forge-jobs.firebaseapp.com",
   projectId: "avax-forge-jobs",
-  storageBucket: "avax-forge-jobs.firebasestorage.app",
+  storageBucket: "avax-forge-jobs.appspot.com",
   messagingSenderId: "1008222365608",
   appId: "1:1008222365608:web:44ac63e1c45ad03000df9d",
   measurementId: "G-2M3281WZDM"
@@ -21,8 +21,12 @@ let app: FirebaseApp;
 try {
   app = initializeApp(firebaseConfig);
   console.log('✅ Firebase initialized successfully');
-} catch (e: any) {
-  console.error('❌ Failed to initialize Firebase app:', e?.message || e);
+} catch (e: unknown) {
+  if (e instanceof Error) {
+    console.error('❌ Failed to initialize Firebase app:', e.message);
+  } else {
+    console.error('❌ Failed to initialize Firebase app:', e);
+  }
   throw e;
 }
 

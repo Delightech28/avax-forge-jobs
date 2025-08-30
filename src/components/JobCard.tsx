@@ -78,11 +78,21 @@ const JobCard = ({ job, isFeatured = false }: JobCardProps) => {
 
       <CardFooter className="pt-0">
         <div className="flex w-full gap-3">
-          <Button variant="outline" className="flex-1" disabled={isFeatured}>
-            View Details
+          <Button
+            variant="outline"
+            className="flex-1"
+            asChild
+            disabled={isFeatured}
+          >
+            <a href={isFeatured ? undefined : `/jobs/${job.id}`}>View Details</a>
           </Button>
-          <Button variant="default" className="flex-1" disabled={isFeatured}>
-            Apply Now
+          <Button
+            variant="default"
+            className="flex-1"
+            asChild
+            disabled={isFeatured}
+          >
+            <a href={isFeatured ? undefined : `/jobs/${job.id}?apply=1`}>Apply Now</a>
           </Button>
         </div>
       </CardFooter>

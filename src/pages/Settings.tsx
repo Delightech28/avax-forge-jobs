@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { db, storage, auth } from '@/integrations/firebase/client';
 import { doc, updateDoc, getDoc } from 'firebase/firestore';
@@ -37,9 +37,9 @@ import Header from "@/components/Header";
 declare global {
   interface Window {
     ethereum?: {
-      request: (args: { method: string; params?: any[] }) => Promise<any>;
-      on: (event: string, callback: (params: any) => void) => void;
-      removeListener: (event: string, callback: (params: any) => void) => void;
+      request: (args: { method: string; params?: unknown[] }) => Promise<unknown>;
+      on: (event: string, callback: (params: unknown) => void) => void;
+      removeListener: (event: string, callback: (params: unknown) => void) => void;
     };
   }
 }
@@ -49,20 +49,33 @@ const Settings = () => {
   const [loading, setLoading] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [editing, setEditing] = useState(false);
+  const [showPasswordForm, setShowPasswordForm] = useState(false);
   const [changingPassword, setChangingPassword] = useState(false);
   const [passwordData, setPasswordData] = useState({
     currentPassword: '',
     newPassword: '',
     confirmPassword: ''
   });
+  type Experience = {
+    title: string;
+    company: string;
+    period: string;
+    description: string;
+  };
+  type Education = {
+    degree: string;
+    school: string;
+    period: string;
+    description: string;
+  };
   const [profileData, setProfileData] = useState({
     fullName: user?.fullName || "",
     bio: "",
     location: "",
     website: "",
     skills: [] as string[],
-    experience: [] as any[],
-    education: [] as any[],
+    experience: [] as Experience[],
+    education: [] as Education[],
     avatar: "",
     walletAddress: "",
     // Company fields
@@ -79,26 +92,20 @@ const Settings = () => {
     contactEmail: "",
   });
   const [newSkill, setNewSkill] = useState("");
-  const [newExperience, setNewExperience] = useState({
+  const [newExperience, setNewExperience] = useState<Experience>({
     title: "",
     company: "",
     period: "",
     description: ""
   });
-  const [newEducation, setNewEducation] = useState({
+  const [newEducation, setNewEducation] = useState<Education>({
     degree: "",
     school: "",
     period: "",
     description: ""
   });
 
-  useEffect(() => {
-    if (user) {
-      loadProfileData();
-    }
-  }, [user]);
-
-  const loadProfileData = async () => {
+  const loadProfileData = React.useCallback(async () => {
     if (!user) return;
     try {
       const userRef = doc(db, 'users', user.id as string);
@@ -128,10 +135,16 @@ const Settings = () => {
           contactEmail: data.contactEmail || data.email || user.email || "",
         });
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error loading profile data:', error);
     }
-  };
+  }, [user]);
+
+  useEffect(() => {
+    if (user) {
+      loadProfileData();
+    }
+  }, [user, loadProfileData]);
 
   const handleSave = async () => {
     if (!user) return;
@@ -139,7 +152,28 @@ const Settings = () => {
     setLoading(true);
     try {
       const userRef = doc(db, 'users', user.id as string);
-      const updateData: any = {
+      const updateData: {
+        fullName: string;
+        bio: string;
+        location: string;
+        website: string;
+        skills: string[];
+        experience: Experience[];
+        education: Education[];
+        companyName: string;
+        companyLogo: string;
+        industry: string;
+        aboutCompany: string;
+        twitter: string;
+        linkedin: string;
+        discord: string;
+        locationPolicy: string;
+        companySize: string;
+        visionCulture: string;
+        contactEmail: string;
+        updated_at: string;
+        avatar?: string;
+      } = {
         fullName: profileData.fullName,
         bio: profileData.bio,
         location: profileData.location,
@@ -165,12 +199,10 @@ const Settings = () => {
       if (profileData.avatar) {
         updateData.avatar = profileData.avatar;
       }
-      
       await updateDoc(userRef, updateData);
-      
       setEditing(false);
       toast.success("Profile updated successfully");
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error updating profile:', error);
       toast.error("Failed to update profile");
     } finally {
@@ -262,7 +294,7 @@ const Settings = () => {
           try {
             const oldAvatarRef = ref(storage, profileData.avatar);
             await deleteObject(oldAvatarRef);
-          } catch (error) {
+          } catch (error: unknown) {
             console.log('Old avatar not found or already deleted');
           }
         }
@@ -273,7 +305,7 @@ const Settings = () => {
         }));
 
         toast.success('Avatar uploaded successfully to cloud storage');
-      } catch (storageError) {
+      } catch (storageError: unknown) {
         console.log('Firebase Storage failed, using base64 fallback:', storageError);
         
         // Fallback to base64 storage
@@ -297,7 +329,7 @@ const Settings = () => {
         };
         reader.readAsDataURL(compressedFile);
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error uploading avatar:', error);
       toast.error('Failed to upload avatar. Please try again.');
     } finally {
@@ -377,15 +409,17 @@ const Settings = () => {
           loadProfileData();
         }
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error connecting wallet:', error);
-      if (error.code === 4001) {
+      if (typeof error === 'object' && error !== null && 'code' in error && (error as { code?: unknown }).code === 4001) {
         toast.error('User rejected the connection request');
       } else {
         toast.error('Failed to connect wallet. Please try again.');
       }
     }
   };
+
+  const passwordStrengthRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]).{8,}$/;
 
   const handlePasswordChange = async () => {
     if (!user || !user.email) {
@@ -404,8 +438,8 @@ const Settings = () => {
       return;
     }
 
-    if (passwordData.newPassword.length < 6) {
-      toast.error('New password must be at least 6 characters long');
+    if (!passwordStrengthRegex.test(passwordData.newPassword)) {
+      toast.error('Password must be at least 8 characters, include uppercase, lowercase, number, and special character.');
       return;
     }
 
@@ -424,16 +458,21 @@ const Settings = () => {
         newPassword: '',
         confirmPassword: ''
       });
+      setShowPasswordForm(false);
       setChangingPassword(false);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error changing password:', error);
-      if (error.code === 'auth/wrong-password') {
-        toast.error('Current password is incorrect');
-      } else if (error.code === 'auth/weak-password') {
-        toast.error('New password is too weak');
-      } else {
-        toast.error('Failed to update password. Please try again.');
+      let errorMessage = 'Current password is incorrect.';
+      if (typeof error === 'object' && error !== null) {
+        const code = (error as { code?: string }).code;
+        const message = (error as { message?: string }).message || '';
+        if (code === 'auth/wrong-password' || message.toLowerCase().includes('wrong-password')) {
+          errorMessage = 'Current password is incorrect';
+        } else if (code === 'auth/weak-password') {
+          errorMessage = 'New password is too weak';
+        }
       }
+      toast.error(errorMessage);
     } finally {
       setChangingPassword(false);
     }
@@ -799,15 +838,64 @@ const Settings = () => {
           {user.role === 'company' && (
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Briefcase className="h-5 w-5" />
-                Company Profile
-              </CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <Briefcase className="h-5 w-5" />
+                  Company Profile
+                </CardTitle>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setEditing(!editing)}
+                  className="h-8 px-2"
+                  aria-label={editing ? 'Cancel Edit' : 'Edit Company Profile'}
+                >
+                  {editing ? <X className="h-4 w-4" /> : <Edit className="h-4 w-4" />}
+                </Button>
+              </div>
               <CardDescription>
                 Manage your company information and branding
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              {/* Avatar Upload for Company */}
+              <div className="flex items-center gap-4">
+                <Avatar className="w-16 h-16">
+                  <AvatarImage src={profileData.avatar} />
+                  <AvatarFallback className="text-lg">
+                    {profileData.companyName?.charAt(0) || 'C'}
+                  </AvatarFallback>
+                </Avatar>
+                {editing && (
+                  <div>
+                    <Label htmlFor="company-avatar" className="cursor-pointer">
+                      <Button variant="outline" size="sm" asChild disabled={uploadingAvatar}>
+                        <span>
+                          {uploadingAvatar ? (
+                            <>
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2"></div>
+                              Uploading...
+                            </>
+                          ) : (
+                            <>
+                              <Upload className="h-4 w-4 mr-2" />
+                              Upload Avatar
+                            </>
+                          )}
+                        </span>
+                      </Button>
+                    </Label>
+                    <input
+                      id="company-avatar"
+                      type="file"
+                      accept="image/*"
+                      onChange={handleAvatarUpload}
+                      className="hidden"
+                      disabled={uploadingAvatar}
+                    />
+                  </div>
+                )}
+              </div>
               <div>
                 <Label htmlFor="companyName">Company Name</Label>
                 {editing ? (
@@ -848,6 +936,20 @@ const Settings = () => {
                   />
                 ) : (
                   <p className="text-sm text-muted-foreground py-2">{profileData.aboutCompany || "No company bio yet"}</p>
+                )}
+              </div>
+
+              <div>
+                <Label htmlFor="website">Website</Label>
+                {editing ? (
+                  <Input
+                    id="website"
+                    value={profileData.website}
+                    onChange={(e) => setProfileData(prev => ({ ...prev, website: e.target.value }))}
+                    placeholder="https://yourcompany.com"
+                  />
+                ) : (
+                  <p className="text-sm text-muted-foreground py-2">{profileData.website || "Not set"}</p>
                 )}
               </div>
 
@@ -892,13 +994,13 @@ const Settings = () => {
                   )}
                 </div>
                 <div>
-                  <Label htmlFor="locationPolicy">Location & Remote Policy</Label>
+                  <Label htmlFor="locationPolicy">Location</Label>
                   {editing ? (
                     <Input
                       id="locationPolicy"
                       value={profileData.locationPolicy}
                       onChange={(e) => setProfileData(prev => ({ ...prev, locationPolicy: e.target.value }))}
-                      placeholder="Remote-first, Hybrid, or Office location"
+                      placeholder="Enter your company location"
                     />
                   ) : (
                     <p className="text-sm text-muted-foreground py-2">{profileData.locationPolicy || "Not set"}</p>
@@ -1066,13 +1168,13 @@ const Settings = () => {
                   <Button 
                     variant="outline" 
                     size="sm"
-                    onClick={() => setChangingPassword(!changingPassword)}
+                    onClick={() => setShowPasswordForm(!showPasswordForm)}
                   >
-                    {changingPassword ? 'Cancel' : 'Change Password'}
+                    {showPasswordForm ? 'Cancel' : 'Change Password'}
                   </Button>
                 </div>
                 
-                {changingPassword && (
+                {showPasswordForm && (
                   <div className="space-y-3 p-4 border rounded-lg">
                     <div>
                       <Label htmlFor="currentPassword">Current Password</Label>
