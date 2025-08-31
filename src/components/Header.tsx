@@ -115,7 +115,7 @@ const Header = () => {
               <Button 
                 variant="default"
                 onClick={handleAuthAction}
-                className="hidden md:flex"
+                className="flex"
               >
                 Sign In
               </Button>
