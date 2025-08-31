@@ -33,16 +33,9 @@ import {
 import { toast } from "sonner";
 import Header from "@/components/Header";
 
-// Add TypeScript declaration for window.ethereum
-declare global {
-  interface Window {
-    ethereum?: {
-      request: (args: { method: string; params?: unknown[] }) => Promise<unknown>;
-      on: (event: string, callback: (params: unknown) => void) => void;
-      removeListener: (event: string, callback: (params: unknown) => void) => void;
-    };
-  }
-}
+
+// Import Ethereum type and window.ethereum declaration
+import { Ethereum } from "../types/ethereum";
 
 const Settings = () => {
   const { user } = useAuth();

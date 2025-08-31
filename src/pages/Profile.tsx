@@ -22,7 +22,8 @@ import {
   Award,
   BookOpen,
   Code,
-  Download
+  Download,
+  Wallet
 } from 'lucide-react';
 import { toast } from 'sonner';
 import Header from '@/components/Header';
@@ -257,57 +258,57 @@ const Profile = () => {
                     <p className="text-lg text-muted-foreground mb-4 max-w-2xl">
                       {profileData.aboutCompany || 'No bio added yet. Update your profile in Settings to add a bio.'}
                     </p>
-                    <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+                    <div className="flex flex-col gap-2 text-sm text-muted-foreground">
                       {user.email && (
                         <div className="flex items-center gap-2">
                           <Mail className="h-4 w-4" />
                           <span>{user.email}</span>
                         </div>
                       )}
-                      {profileData.locationPolicy ? (
+                      {profileData.locationPolicy && (
                         <div className="flex items-center gap-2">
                           <MapPin className="h-4 w-4" />
                           <span>{profileData.locationPolicy}</span>
                         </div>
-                      ) : null}
+                      )}
                       <div className="flex items-center gap-2">
                         <Calendar className="h-4 w-4" />
                         <span>Member Since {formatJoinDate(user.createdAt || '')}</span>
                       </div>
+                      {(profileData.website || profileData.twitter || profileData.linkedin || profileData.discord) && (
+                        <div className="flex flex-wrap items-center gap-4 mt-2">
+                          {profileData.website && (
+                            <a 
+                              href={profileData.website.startsWith('http') ? profileData.website : `https://${profileData.website}`} 
+                              target="_blank" 
+                              rel="noreferrer" 
+                              className="hover:text-primary transition-colors"
+                            >
+                              {getWebsiteIcon(profileData.website)}
+                            </a>
+                          )}
+                          {profileData.twitter && (
+                            <a href={profileData.twitter} target="_blank" rel="noreferrer" className="hover:text-primary transition-colors">
+                              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor" aria-label="X">
+                                <path d="M18.244 3H21l-6.58 7.51L22.5 21h-6.73l-4.27-5.18L6 21H3.244l6.97-7.96L1.5 3h6.86l3.86 4.7L18.244 3Zm-1.18 16h1.92L8.98 5h-1.94l10.02 14Z"/>
+                              </svg>
+                            </a>
+                          )}
+                          {profileData.linkedin && (
+                            <a href={profileData.linkedin} target="_blank" rel="noreferrer" className="hover:text-primary transition-colors">
+                              <Linkedin className="h-4 w-4" />
+                            </a>
+                          )}
+                          {profileData.discord && (
+                            <a href={profileData.discord} target="_blank" rel="noreferrer" className="hover:text-primary transition-colors">
+                              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor" aria-label="Discord">
+                                <path d="M20.317 4.369A19.791 19.791 0 0 0 16.885 3.1a.486.486 0 0 0-.518.243c-.211.375-.444.864-.608 1.249a18.524 18.524 0 0 0-5.518 0c-.164-.385-.397-.874-.608-1.249a.486.486 0 0 0-.518-.243c-1.432.326-2.814.812-4.112 1.269A.478.478 0 0 0 2 5.77c-1.1 2.042-1.75 4.29-1.75 6.6 0 7.5 6.5 10.5 12.75 10.5s12.75-3 12.75-10.5c0-2.31-.65-4.558-1.75-6.6a.478.478 0 0 0-.433-.401ZM8.02 15.27c-1.18 0-2.15-1.08-2.15-2.41 0-1.33.96-2.41 2.15-2.41s2.15 1.08 2.15 2.41c0 1.33-.96 2.41-2.15 2.41Zm7.96 0c-1.18 0-2.15-1.08-2.15-2.41 0-1.33.96-2.41 2.15-2.41s2.15 1.08 2.15 2.41c0 1.33-.96 2.41-2.15 2.41Z"/>
+                              </svg>
+                            </a>
+                          )}
+                        </div>
+                      )}
                     </div>
-                    {(profileData.website || profileData.twitter || profileData.linkedin || profileData.discord) && (
-                      <div className="flex flex-wrap items-center gap-4 mt-2">
-                        {profileData.website && (
-                          <a 
-                            href={profileData.website.startsWith('http') ? profileData.website : `https://${profileData.website}`} 
-                            target="_blank" 
-                            rel="noreferrer" 
-                            className="hover:text-primary transition-colors"
-                          >
-                            {getWebsiteIcon(profileData.website)}
-                          </a>
-                        )}
-                        {profileData.twitter && (
-                          <a href={profileData.twitter} target="_blank" rel="noreferrer" className="hover:text-primary transition-colors">
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor" aria-label="X">
-                              <path d="M18.244 3H21l-6.58 7.51L22.5 21h-6.73l-4.27-5.18L6 21H3.244l6.97-7.96L1.5 3h6.86l3.86 4.7L18.244 3Zm-1.18 16h1.92L8.98 5h-1.94l10.02 14Z"/>
-                            </svg>
-                          </a>
-                        )}
-                        {profileData.linkedin && (
-                          <a href={profileData.linkedin} target="_blank" rel="noreferrer" className="hover:text-primary transition-colors">
-                            <Linkedin className="h-4 w-4" />
-                          </a>
-                        )}
-                        {profileData.discord && (
-                          <a href={profileData.discord} target="_blank" rel="noreferrer" className="hover:text-primary transition-colors">
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor" aria-label="Discord">
-                              <path d="M20.317 4.369A19.791 19.791 0 0 0 16.885 3.1a.486.486 0 0 0-.518.243c-.211.375-.444.864-.608 1.249a18.524 18.524 0 0 0-5.518 0c-.164-.385-.397-.874-.608-1.249a.486.486 0 0 0-.518-.243c-1.432.326-2.814.812-4.112 1.269A.478.478 0 0 0 2 5.77c-1.1 2.042-1.75 4.29-1.75 6.6 0 7.5 6.5 10.5 12.75 10.5s12.75-3 12.75-10.5c0-2.31-.65-4.558-1.75-6.6a.478.478 0 0 0-.433-.401ZM8.02 15.27c-1.18 0-2.15-1.08-2.15-2.41 0-1.33.96-2.41 2.15-2.41s2.15 1.08 2.15 2.41c0 1.33-.96 2.41-2.15 2.41Zm7.96 0c-1.18 0-2.15-1.08-2.15-2.41 0-1.33.96-2.41 2.15-2.41s2.15 1.08 2.15 2.41c0 1.33-.96 2.41-2.15 2.41Z"/>
-                            </svg>
-                          </a>
-                        )}
-                      </div>
-                    )}
                   </>
                 ) : (
                   <>
@@ -437,28 +438,31 @@ const Profile = () => {
                 </Card>
               </>
             )}
+
             {user.role !== 'company' && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Code className="h-5 w-5" />
-                    Skills & Technologies
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {profileData.skills.length > 0 ? (
-                    <div className="flex flex-wrap gap-2">
-                      {profileData.skills.map((skill, index) => (
-                        <Badge key={index} variant="secondary" className="text-sm">
-                          {skill}
-                        </Badge>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-muted-foreground text-sm">No skills added yet. Update your profile in Settings to add your skills.</p>
-                  )}
-                </CardContent>
-              </Card>
+              <>
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Code className="h-5 w-5" />
+                      Skills & Technologies
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {profileData.skills.length > 0 ? (
+                      <div className="flex flex-wrap gap-2">
+                        {profileData.skills.map((skill, index) => (
+                          <Badge key={index} variant="secondary" className="text-sm">
+                            {skill}
+                          </Badge>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-muted-foreground text-sm">No skills added yet. Update your profile in Settings to add your skills.</p>
+                    )}
+                  </CardContent>
+                </Card>
+              </>
             )}
 
             {user.role !== 'company' && (
@@ -494,36 +498,85 @@ const Profile = () => {
             )}
 
             {user.role !== 'company' && (
+              <>
+                {/* Education card after Professional Experience */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <BookOpen className="h-5 w-5" />
+                      Education
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    {profileData.education.length > 0 ? (
+                      profileData.education.map((edu, index) => (
+                        <div key={index} className="space-y-2">
+                          <div className="flex items-start justify-between">
+                            <div>
+                              <h3 className="font-semibold text-lg">{edu.degree}</h3>
+                              <p className="text-muted-foreground">{edu.school}</p>
+                            </div>
+                            <Badge variant="outline" className="text-xs">
+                              {edu.period}
+                            </Badge>
+                          </div>
+                          <p className="text-sm text-muted-foreground">{edu.description}</p>
+                          {index < profileData.education.length - 1 && <Separator />}
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-muted-foreground text-sm">No education added yet. Update your profile in Settings to add your educational background.</p>
+                    )}
+                  </CardContent>
+                </Card>
+                {/* Certifications card directly under Education */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Award className="h-5 w-5" />
+                      Certifications
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <p className="text-muted-foreground text-sm">No certifications added yet. Update your profile in Settings to add your certifications.</p>
+                  </CardContent>
+                </Card>
+              </>
+            )}
+
+            {user.role !== 'company' && (
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <BookOpen className="h-5 w-5" />
-                    Education
+                    <Briefcase className="h-5 w-5" />
+                    Professional Experience
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                  {profileData.education.length > 0 ? (
-                    profileData.education.map((edu, index) => (
+                  {profileData.experience.length > 0 ? (
+                    profileData.experience.map((exp, index) => (
                       <div key={index} className="space-y-2">
                         <div className="flex items-start justify-between">
                           <div>
-                            <h3 className="font-semibold text-lg">{edu.degree}</h3>
-                            <p className="text-muted-foreground">{edu.school}</p>
+                            <h3 className="font-semibold text-lg">{exp.title}</h3>
+                            <p className="text-muted-foreground">{exp.company}</p>
                           </div>
                           <Badge variant="outline" className="text-xs">
-                            {edu.period}
+                            {exp.period}
                           </Badge>
                         </div>
-                        <p className="text-sm text-muted-foreground">{edu.description}</p>
-                        {index < profileData.education.length - 1 && <Separator />}
+                        <p className="text-sm text-muted-foreground">{exp.description}</p>
+                        {index < profileData.experience.length - 1 && <Separator />}
                       </div>
                     ))
                   ) : (
-                    <p className="text-muted-foreground text-sm">No education added yet. Update your profile in Settings to add your educational background.</p>
+                    <p className="text-muted-foreground text-sm">No experience added yet. Update your profile in Settings to add your work experience.</p>
                   )}
                 </CardContent>
               </Card>
             )}
+
+          
           </div>
 
           {/* Sidebar */}
@@ -590,18 +643,29 @@ const Profile = () => {
               </CardContent>
             </Card>
 
+              {/* Connect Wallet (Job Seeker only) */}
+              {user.role !== 'company' && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">Connect Wallet</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <Button className="w-full flex items-center justify-center gap-2" variant="default">
+                      <Wallet className="h-4 w-4" />
+                      Connect Wallet
+                    </Button>
+                    {profileData.walletAddress && (
+                      <div className="mt-2 text-xs text-green-600 break-all text-center">
+                        Connected: {profileData.walletAddress}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+
             {user.role !== 'company' && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Award className="h-5 w-5" />
-                    Certifications
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <p className="text-muted-foreground text-sm">No certifications added yet. Update your profile in Settings to add your certifications.</p>
-                </CardContent>
-              </Card>
+                <>
+                </>
             )}
 
 
