@@ -23,10 +23,12 @@ import {
   BookOpen,
   Code,
   Download,
-  Wallet
+  Wallet,
+  LogOut
 } from 'lucide-react';
 import { toast } from 'sonner';
 import Header from '@/components/Header';
+import { useSubscription } from '@/hooks/useSubscription';
 
 const Profile = () => {
   const { user, loading } = useAuth();
@@ -67,6 +69,27 @@ const Profile = () => {
     visionCulture: '',
     contactEmail: '',
   });
+  const [walletJustConnected, setWalletJustConnected] = useState(false);
+
+  // Subscription hook integration
+  const {
+    subscribe,
+    checkExpiration,
+    getPrice,
+    expiration,
+    activePlan,
+    loading: subLoading,
+    error: subError,
+  } = useSubscription(user?.id, profileData.walletAddress);
+  const [subscribed, setSubscribed] = useState(false);
+  const [expirationDate, setExpirationDate] = useState<string | null>(null);
+  const [showSubscribe, setShowSubscribe] = useState(false);
+
+  // Helper to shorten wallet address
+  const getShortAddress = (addr: string) => {
+    if (!addr || addr.length < 10) return addr;
+    return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
+  };
 
   useEffect(() => {
     if (user) {
@@ -74,6 +97,27 @@ const Profile = () => {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
+
+  useEffect(() => {
+    // Only check expiration and update state once per visit, cache in local state
+    let didCheck = false;
+    const fetchExpiration = async () => {
+      if (didCheck) return;
+      didCheck = true;
+      if (profileData.walletAddress) {
+        const exp = await checkExpiration();
+        if (exp && exp > Date.now() / 1000) {
+          setSubscribed(true);
+          setExpirationDate(new Date(exp * 1000).toLocaleDateString());
+        } else {
+          setSubscribed(false);
+          setExpirationDate(null);
+        }
+      }
+    };
+    fetchExpiration();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profileData.walletAddress]);
 
   const loadProfileData = async () => {
     if (!user) return;
@@ -238,18 +282,34 @@ const Profile = () => {
                   <h1 className="text-3xl font-bold flex items-center gap-2">
                     {user.role === 'company' ? (profileData.companyName || 'ArenaApp') : profileData.fullName}
                     {user.role !== 'company' && (
-                      <button
-                        className="flex items-center gap-1 focus:outline-none border border-blue-600 rounded-full px-3 py-1 bg-white hover:bg-blue-50 transition"
-                        onClick={() => navigate('/get-verified')}
-                        type="button"
-                        aria-label="Get Verified"
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="#2563eb" className="w-4 h-4">
-                          <circle cx="12" cy="12" r="10" stroke="#2563eb" strokeWidth="2" fill="#fff" />
-                          <path strokeLinecap="round" strokeLinejoin="round" stroke="#2563eb" strokeWidth="2" d="M9 12l2 2 4-4" />
-                        </svg>
-                        <span className="text-blue-600 font-medium text-xs">Get Verified</span>
-                      </button>
+                      subscribed && expirationDate ? (
+                        // Show blue verified icon if subscribed and not expired, make clickable
+                        <span
+                          className="flex items-center gap-1 border border-blue-600 rounded-full px-3 py-1 bg-blue-50 cursor-pointer"
+                          onClick={() => navigate('/get-verified')}
+                          title="Manage your subscription"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="#2563eb" className="w-4 h-4">
+                            <circle cx="12" cy="12" r="10" stroke="#2563eb" strokeWidth="2" fill="#fff" />
+                            <path strokeLinecap="round" strokeLinejoin="round" stroke="#2563eb" strokeWidth="2" d="M9 12l2 2 4-4" />
+                          </svg>
+                          <span className="text-blue-600 font-medium text-xs">Verified</span>
+                        </span>
+                      ) : (
+                        // Show Get Verified button if not subscribed or expired
+                        <button
+                          className="flex items-center gap-1 focus:outline-none border border-blue-600 rounded-full px-3 py-1 bg-white hover:bg-blue-50 transition"
+                          onClick={() => navigate('/get-verified')}
+                          type="button"
+                          aria-label="Get Verified"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="#2563eb" className="w-4 h-4">
+                            <circle cx="12" cy="12" r="10" stroke="#2563eb" strokeWidth="2" fill="#fff" />
+                            <path strokeLinecap="round" strokeLinejoin="round" stroke="#2563eb" strokeWidth="2" d="M9 12l2 2 4-4" />
+                          </svg>
+                          <span className="text-blue-600 font-medium text-xs">Get Verified</span>
+                        </button>
+                      )
                     )}
                   </h1>
                 </div>
@@ -650,22 +710,117 @@ const Profile = () => {
                     <CardTitle className="text-lg">Connect Wallet</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-3">
-                    <Button className="w-full flex items-center justify-center gap-2" variant="default">
-                      <Wallet className="h-4 w-4" />
-                      Connect Wallet
-                    </Button>
-                    {profileData.walletAddress && (
-                      <div className="mt-2 text-xs text-green-600 break-all text-center">
-                        Connected: {profileData.walletAddress}
-                      </div>
+                    {profileData.walletAddress && walletJustConnected ? (
+                      <>
+                        <Button
+                          className="w-full flex items-center justify-center gap-2"
+                          variant="destructive"
+                          onClick={async () => {
+                            setProfileData(prev => ({ ...prev, walletAddress: '' }));
+                            setWalletJustConnected(false);
+                            toast.success('Wallet disconnected!');
+                            if (user && user.id) {
+                              const userRef = doc(db, 'users', user.id);
+                              await import('firebase/firestore').then(firestore =>
+                                firestore.updateDoc(userRef, { walletAddress: '' })
+                              );
+                            }
+                          }}
+                        >
+                          <LogOut className="h-4 w-4" />
+                          Disconnect
+                        </Button>
+                        <div className="mt-2 text-xs text-green-600 break-all text-center">
+                          Connected: {getShortAddress(profileData.walletAddress)}
+                        </div>
+                      </>
+                    ) : (
+                      <Button
+                        className="w-full flex items-center justify-center gap-2"
+                        variant="default"
+                        onClick={async () => {
+                          if (!window.ethereum) {
+                            toast.error('MetaMask is not installed.');
+                            return;
+                          }
+                          try {
+                            const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+                            const address = accounts[0];
+                            if (!address) throw new Error('No account found');
+                            setProfileData(prev => ({ ...prev, walletAddress: address }));
+                            setWalletJustConnected(true);
+                            // Optionally, persist to Firestore if user is authenticated
+                            if (user && user.id) {
+                              const userRef = doc(db, 'users', user.id);
+                              await import('firebase/firestore').then(firestore =>
+                                firestore.updateDoc(userRef, { walletAddress: address })
+                              );
+                            }
+                            toast.success('Wallet connected!');
+                          } catch (err) {
+                            toast.error('Failed to connect wallet.');
+                          }
+                        }}
+                      >
+                        <Wallet className="h-4 w-4" />
+                        Connect Wallet
+                      </Button>
                     )}
                   </CardContent>
                 </Card>
               )}
 
             {user.role !== 'company' && (
-                <>
-                </>
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">Subscription Status</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm">Status</span>
+                      {subscribed ? (
+                        <Badge variant="default" className="flex items-center gap-1">
+                          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="#2563eb" className="w-4 h-4">
+                            <circle cx="12" cy="12" r="10" stroke="#2563eb" strokeWidth="2" fill="#fff" />
+                            <path strokeLinecap="round" strokeLinejoin="round" stroke="#2563eb" strokeWidth="2" d="M9 12l2 2 4-4" />
+                          </svg>
+                          <span>Verified</span>
+                        </Badge>
+                      ) : (
+                        <Badge variant="secondary">Not Verified</Badge>
+                      )}
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm">Expires</span>
+                      <span className="text-sm font-medium">{expirationDate || 'N/A'}</span>
+                    </div>
+                    {!subscribed && profileData.walletAddress && (
+                      <Button
+                        className="w-full flex items-center justify-center gap-2"
+                        variant="default"
+                        disabled={subLoading}
+                        onClick={async () => {
+                          setShowSubscribe(true);
+                          const success = await subscribe('ProMonthly'); // or let user pick plan
+                          if (success) {
+                            toast.success('Subscription successful!');
+                            setSubscribed(true);
+                            const exp = await checkExpiration();
+                            setExpirationDate(exp ? new Date(exp * 1000).toLocaleDateString() : null);
+                          } else {
+                            toast.error(subError || 'Subscription failed');
+                          }
+                          setShowSubscribe(false);
+                        }}
+                      >
+                        <Wallet className="h-4 w-4" />
+                        Get Verified
+                      </Button>
+                    )}
+                    {subLoading && <div className="text-xs text-blue-600">Processing...</div>}
+                    {subError && <div className="text-xs text-red-600">{subError}</div>}
+                  </CardContent>
+                </Card>
             )}
 
 
