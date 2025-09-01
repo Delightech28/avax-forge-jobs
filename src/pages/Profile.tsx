@@ -30,9 +30,101 @@ import { toast } from 'sonner';
 import Header from '@/components/Header';
 import { useSubscription } from '@/hooks/useSubscription';
 
+// ...existing code...
 const Profile = () => {
+  // Helper to shorten wallet address
+  const getShortAddress = (addr: string) => {
+    if (!addr || addr.length < 10) return addr;
+    return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
+  };
   const { user, loading } = useAuth();
   const navigate = useNavigate();
+
+  // State hooks must be declared before any useEffect that uses them
+  const [profileData, setProfileData] = useState({
+    fullName: '',
+    bio: '',
+    location: '',
+    website: '',
+    skills: [] as string[],
+    experience: [] as any[],
+    education: [] as any[],
+    avatar: '',
+    walletAddress: '',
+    companyName: '',
+    companyLogo: '',
+    industry: '',
+    aboutCompany: '',
+    twitter: '',
+    linkedin: '',
+    discord: '',
+    locationPolicy: '',
+    companySize: '',
+    visionCulture: '',
+    contactEmail: '',
+  });
+  const [subscribed, setSubscribed] = useState(false);
+  const [expirationDate, setExpirationDate] = useState<string | null>(null);
+  const [walletJustConnected, setWalletJustConnected] = useState(false);
+
+  // Always fetch walletAddress from Firestore on mount and when user changes
+  useEffect(() => {
+    const fetchWalletAndSubscription = async () => {
+      if (user && user.id) {
+        const userRef = doc(db, 'users', user.id);
+        const userSnap = await getDoc(userRef);
+        if (userSnap.exists()) {
+          const data = userSnap.data();
+          setProfileData(prev => ({
+            ...prev,
+            fullName: data.fullName || user.fullName || user.email || '',
+            bio: data.bio || '',
+            location: data.location || '',
+            website: data.website || '',
+            skills: data.skills || [],
+            experience: data.experience || [],
+            education: data.education || [],
+            avatar: data.avatar || '',
+            walletAddress: data.walletAddress || '',
+            companyName: data.companyName || '',
+            companyLogo: data.companyLogo || '',
+            industry: data.industry || '',
+            aboutCompany: data.aboutCompany || '',
+            twitter: data.twitter || '',
+            linkedin: data.linkedin || '',
+            discord: data.discord || '',
+            locationPolicy: data.locationPolicy || '',
+            companySize: data.companySize || '',
+            visionCulture: data.visionCulture || '',
+            contactEmail: data.contactEmail || '',
+          }));
+          // Check for subscription plan and auto-verify
+          const plans = ['ProMonthly', 'ProAnnual', 'EliteMonthly', 'EliteAnnual'];
+          if (plans.includes(data.verified)) {
+            if (!subscribed) setSubscribed(true);
+            // Use subscriptionExpiration if available
+            if (data.subscriptionExpiration) {
+              setExpirationDate(new Date(data.subscriptionExpiration * 1000).toLocaleDateString());
+            } else if (data.expiration) {
+              setExpirationDate(new Date(data.expiration * 1000).toLocaleDateString());
+            } else {
+              setExpirationDate(null);
+            }
+          } else {
+            if (subscribed) setSubscribed(false);
+            setExpirationDate(null);
+          }
+        } else {
+          // If no user doc, fallback to auth user fullName/email
+          setProfileData(prev => ({
+            ...prev,
+            fullName: user.fullName || user.email || prev.fullName
+          }));
+        }
+      }
+    };
+    fetchWalletAndSubscription();
+  }, [user, profileData.walletAddress]);
   
   type Experience = {
     title: string;
@@ -46,30 +138,6 @@ const Profile = () => {
     period: string;
     description: string;
   };
-  const [profileData, setProfileData] = useState({
-    fullName: '',
-    bio: '',
-    location: '',
-    website: '',
-    skills: [] as string[],
-    experience: [] as Experience[],
-    education: [] as Education[],
-    avatar: '',
-    walletAddress: '',
-    // Company fields (optional)
-    companyName: '',
-    companyLogo: '',
-    industry: '',
-    aboutCompany: '',
-    twitter: '',
-    linkedin: '',
-    discord: '',
-    locationPolicy: '',
-    companySize: '',
-    visionCulture: '',
-    contactEmail: '',
-  });
-  const [walletJustConnected, setWalletJustConnected] = useState(false);
 
   // Subscription hook integration
   const {
@@ -81,104 +149,6 @@ const Profile = () => {
     loading: subLoading,
     error: subError,
   } = useSubscription(user?.id, profileData.walletAddress);
-  const [subscribed, setSubscribed] = useState(false);
-  const [expirationDate, setExpirationDate] = useState<string | null>(null);
-  const [showSubscribe, setShowSubscribe] = useState(false);
-
-  // Helper to shorten wallet address
-  const getShortAddress = (addr: string) => {
-    if (!addr || addr.length < 10) return addr;
-    return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
-  };
-
-  useEffect(() => {
-    if (user) {
-      loadProfileData();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user]);
-
-  useEffect(() => {
-    // Only check expiration and update state once per visit, cache in local state
-    let didCheck = false;
-    const fetchExpiration = async () => {
-      if (didCheck) return;
-      didCheck = true;
-      if (profileData.walletAddress) {
-        const exp = await checkExpiration();
-        if (exp && exp > Date.now() / 1000) {
-          setSubscribed(true);
-          setExpirationDate(new Date(exp * 1000).toLocaleDateString());
-        } else {
-          setSubscribed(false);
-          setExpirationDate(null);
-        }
-      }
-    };
-    fetchExpiration();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [profileData.walletAddress]);
-
-  const loadProfileData = async () => {
-    if (!user) return;
-    try {
-      const userRef = doc(db, 'users', user.id as string);
-      const userSnap = await getDoc(userRef);
-      
-      if (userSnap.exists()) {
-        const data = userSnap.data();
-        setProfileData({
-          fullName: data.fullName || user.fullName || 'ArenaApp',
-          bio: data.bio || '',
-          location: data.location || '',
-          website: data.website || '',
-          skills: data.skills || [],
-          experience: data.experience || [],
-          education: data.education || [],
-          avatar: data.avatar || '',
-          walletAddress: data.walletAddress || '',
-          companyName: data.companyName || '',
-          companyLogo: data.companyLogo || '',
-          industry: data.industry || '',
-          aboutCompany: data.aboutCompany || '',
-          twitter: data.twitter || '',
-          linkedin: data.linkedin || '',
-          discord: data.discord || '',
-          locationPolicy: data.locationPolicy || '',
-          companySize: data.companySize || '',
-          visionCulture: data.visionCulture || '',
-          contactEmail: data.contactEmail || '',
-        });
-      } else {
-        // Fallback to default data if user document doesn't exist
-        setProfileData({
-          fullName: user.fullName || 'ArenaApp',
-          bio: '',
-          location: '',
-          website: '',
-          skills: [],
-          experience: [],
-          education: [],
-          avatar: '',
-          walletAddress: '',
-          companyName: '',
-          companyLogo: '',
-          industry: '',
-          aboutCompany: '',
-          twitter: '',
-          linkedin: '',
-          discord: '',
-          locationPolicy: '',
-          companySize: '',
-          visionCulture: '',
-          contactEmail: '',
-        });
-      }
-    } catch (error) {
-      console.error('Error loading profile data:', error);
-      toast.error('Failed to load profile data');
-    }
-  };
 
   const getWebsiteIcon = (url: string) => {
     const u = (url || '').toLowerCase();
@@ -710,7 +680,7 @@ const Profile = () => {
                     <CardTitle className="text-lg">Connect Wallet</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-3">
-                    {profileData.walletAddress && walletJustConnected ? (
+                    {profileData.walletAddress ? (
                       <>
                         <Button
                           className="w-full flex items-center justify-center gap-2"
@@ -744,12 +714,12 @@ const Profile = () => {
                             return;
                           }
                           try {
+                            // Only request accounts when user clicks, not on mount
                             const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
                             const address = accounts[0];
                             if (!address) throw new Error('No account found');
                             setProfileData(prev => ({ ...prev, walletAddress: address }));
                             setWalletJustConnected(true);
-                            // Optionally, persist to Firestore if user is authenticated
                             if (user && user.id) {
                               const userRef = doc(db, 'users', user.id);
                               await import('firebase/firestore').then(firestore =>
@@ -794,31 +764,9 @@ const Profile = () => {
                       <span className="text-sm">Expires</span>
                       <span className="text-sm font-medium">{expirationDate || 'N/A'}</span>
                     </div>
-                    {!subscribed && profileData.walletAddress && (
-                      <Button
-                        className="w-full flex items-center justify-center gap-2"
-                        variant="default"
-                        disabled={subLoading}
-                        onClick={async () => {
-                          setShowSubscribe(true);
-                          const success = await subscribe('ProMonthly'); // or let user pick plan
-                          if (success) {
-                            toast.success('Subscription successful!');
-                            setSubscribed(true);
-                            const exp = await checkExpiration();
-                            setExpirationDate(exp ? new Date(exp * 1000).toLocaleDateString() : null);
-                          } else {
-                            toast.error(subError || 'Subscription failed');
-                          }
-                          setShowSubscribe(false);
-                        }}
-                      >
-                        <Wallet className="h-4 w-4" />
-                        Get Verified
-                      </Button>
-                    )}
-                    {subLoading && <div className="text-xs text-blue-600">Processing...</div>}
-                    {subError && <div className="text-xs text-red-600">{subError}</div>}
+                      {/* Removed Connect Wallet button as requested */}
+                    {/* subLoading && <div className="text-xs text-blue-600">Processing...</div>*/}
+                    {/*subError && <div className="text-xs text-red-600">{subError}</div>*/}
                   </CardContent>
                 </Card>
             )}
@@ -829,6 +777,5 @@ const Profile = () => {
       </div>
     </div>
   );
-};
-
+}
 export default Profile;

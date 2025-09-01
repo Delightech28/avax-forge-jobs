@@ -28,8 +28,10 @@ import {
   BookOpen,
   Code,
   Award,
-  Upload
+  Upload,
+  LogOut
 } from "lucide-react";
+// ...existing code...
 import { toast } from "sonner";
 import Header from "@/components/Header";
 
@@ -38,6 +40,7 @@ import Header from "@/components/Header";
 import { Ethereum } from "../types/ethereum";
 
 const Settings = () => {
+  // ...existing code...
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
@@ -132,6 +135,22 @@ const Settings = () => {
       console.error('Error loading profile data:', error);
     }
   }, [user]);
+
+  // Disconnect wallet handler (now after loadProfileData)
+  const disconnectWallet = async () => {
+    if (!user) return;
+    try {
+      const userRef = doc(db, 'users', user.id as string);
+      await updateDoc(userRef, {
+        walletAddress: '',
+        updated_at: new Date().toISOString(),
+      });
+      toast.success('Wallet disconnected');
+      loadProfileData();
+    } catch (error) {
+      toast.error('Failed to disconnect wallet');
+    }
+  };
 
   useEffect(() => {
     if (user) {
@@ -475,7 +494,7 @@ const Settings = () => {
     return (
       <div className="min-h-screen bg-background">
         <Header />
-  <main className="container mx-auto px-4 py-8 max-w-md">
+  <main className="container mx-auto px-4 py-12">
           <div className="text-center py-12">
             <SettingsIcon className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
             <h3 className="text-lg font-semibold mb-2">Sign in to access settings</h3>
@@ -490,26 +509,27 @@ const Settings = () => {
     <div className="min-h-screen bg-background">
       <Header />
       
-  <main className="container mx-auto px-4 py-8 max-w-md">
+  <main className="container mx-auto px-4 py-12 max-w-3xl">
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2">Settings</h1>
           <p className="text-muted-foreground">Manage your account settings and preferences</p>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-2">
+  <div className="flex flex-col gap-10 w-full">
           {/* Profile Information (Users only) */}
           {user.role !== 'company' && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <User className="h-5 w-5" />
-                Profile Information
-              </CardTitle>
-              <CardDescription>
-                Manage your profile details and settings
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4 max-w-xs mx-auto">
+          <>
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <User className="h-5 w-5" />
+                  Profile Information
+                </CardTitle>
+                <CardDescription>
+                  Manage your profile details and settings
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-8 w-full">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">Profile Settings</span>
                 <Button
@@ -522,7 +542,7 @@ const Settings = () => {
                 </Button>
               </div>
 
-              <div className="space-y-4">
+              <div className="space-y-8">
                 {/* Avatar Upload */}
                 <div className="flex items-center gap-4">
                   <Avatar className="w-16 h-16">
@@ -637,59 +657,59 @@ const Settings = () => {
                   </Button>
                 </div>
               )}
-            </CardContent>
-          </Card>
+
+              </CardContent>
+            </Card>
+
+            {/* Skills & Technologies (Users only) */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Code className="h-5 w-5" />
+                  Skills & Technologies
+                </CardTitle>
+                <CardDescription>
+                  Add your technical skills and expertise
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-8 w-full">
+                {editing && (
+                  <div className="flex gap-2">
+                    <Input
+                      value={newSkill}
+                      onChange={(e) => setNewSkill(e.target.value)}
+                      placeholder="Add a skill"
+                      onKeyPress={(e) => e.key === 'Enter' && addSkill()}
+                    />
+                    <Button onClick={addSkill} size="sm">
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
+                <div className="flex flex-wrap gap-2">
+                  {profileData.skills.map((skill, index) => (
+                    <Badge key={index} variant="secondary" className="flex items-center gap-1">
+                      {skill}
+                      {editing && (
+                        <button
+                          onClick={() => removeSkill(skill)}
+                          className="ml-1 hover:text-destructive"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      )}
+                    </Badge>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </>
           )}
 
-          {/* Skills & Technologies (Users only) */}
-          {user.role !== 'company' && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Code className="h-5 w-5" />
-                Skills & Technologies
-              </CardTitle>
-              <CardDescription>
-                Add your technical skills and expertise
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4 max-w-xs mx-auto">
-              {editing && (
-                <div className="flex gap-2">
-                  <Input
-                    value={newSkill}
-                    onChange={(e) => setNewSkill(e.target.value)}
-                    placeholder="Add a skill"
-                    onKeyPress={(e) => e.key === 'Enter' && addSkill()}
-                  />
-                  <Button onClick={addSkill} size="sm">
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </div>
-              )}
-              
-              <div className="flex flex-wrap gap-2">
-                {profileData.skills.map((skill, index) => (
-                  <Badge key={index} variant="secondary" className="flex items-center gap-1">
-                    {skill}
-                    {editing && (
-                      <button
-                        onClick={() => removeSkill(skill)}
-                        className="ml-1 hover:text-destructive"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    )}
-                  </Badge>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-          )}
 
           {/* Professional Experience (Users only) */}
           {user.role !== 'company' && (
-          <Card>
+          <Card className="w-full p-6">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Briefcase className="h-5 w-5" />
@@ -699,7 +719,7 @@ const Settings = () => {
                 Add your work experience and achievements
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4 max-w-xs mx-auto">
+            <CardContent className="space-y-4">
               {editing && (
                 <div className="space-y-3 p-4 border rounded-lg">
                   <Input
@@ -759,7 +779,7 @@ const Settings = () => {
 
           {/* Education (Users only) */}
           {user.role !== 'company' && (
-          <Card>
+          <Card className="w-full p-6">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <BookOpen className="h-5 w-5" />
@@ -769,7 +789,7 @@ const Settings = () => {
                 Add your educational background
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4 max-w-xs mx-auto">
+            <CardContent className="space-y-4">
               {editing && (
                 <div className="space-y-3 p-4 border rounded-lg">
                   <Input
@@ -829,7 +849,7 @@ const Settings = () => {
 
           {/* Company Profile (Companies only) */}
           {user.role === 'company' && (
-          <Card>
+          <Card className="w-full p-6">
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle className="flex items-center gap-2">
@@ -850,7 +870,7 @@ const Settings = () => {
                 Manage your company information and branding
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4 max-w-xs mx-auto">
+            <CardContent className="space-y-4">
               {/* Avatar Upload for Company */}
               <div className="flex items-center gap-4">
                 <Avatar className="w-16 h-16">
@@ -1060,7 +1080,7 @@ const Settings = () => {
           )}
 
                       {/* Wallet Connection */}
-            <Card>
+            <Card className="w-full p-6">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Wallet className="h-5 w-5" />
@@ -1070,7 +1090,7 @@ const Settings = () => {
                   Connect your wallet to apply for Web3 jobs and receive payments
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4 max-w-xs mx-auto">
+              <CardContent className="space-y-4">
                 <div className="flex items-center justify-between p-4 border rounded-lg">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 bg-gradient-to-r from-primary/20 to-primary-glow/20 rounded-lg flex items-center justify-center">
@@ -1087,10 +1107,15 @@ const Settings = () => {
                     </div>
                   </div>
                   <Button 
-                    onClick={connectWallet} 
+                    onClick={profileData.walletAddress ? disconnectWallet : connectWallet}
                     variant={profileData.walletAddress ? "default" : "outline"}
                   >
-                    {profileData.walletAddress ? 'Connected' : 'Connect MetaMask'}
+                    {profileData.walletAddress ? (
+                      <>
+                        <LogOut className="h-4 w-4 mr-2" />
+                        Disconnect
+                      </>
+                    ) : 'Connect MetaMask'}
                   </Button>
                 </div>
               </CardContent>
