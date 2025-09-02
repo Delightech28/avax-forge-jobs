@@ -24,11 +24,19 @@ type NotificationPrefs = {
 };
 
 const Notifications = () => {
+  console.log('Notifications page mounted');
   const { user } = useAuth();
+  console.log('Notifications page mounted');
+  console.log('Notifications page user:', user);
+  console.log('Notifications page mounted');
+  console.log('Notifications page user:', user);
+  console.log('Notifications page user:', user);
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+  console.log('Notifications useEffect user:', user);
+  console.log('Notifications useEffect user:', user);
     if (!user) return;
     const fetchNotifications = async () => {
       setLoading(true);
@@ -36,12 +44,18 @@ const Notifications = () => {
         const { collection, query, where, orderBy, getDocs } = await import('firebase/firestore');
         const q = query(
           collection(db, 'notifications'),
-          where('userId', '==', user.id),
-        orderBy('createdAt', 'desc')
-      );
+          where('userId', '==', user.uid),
+          orderBy('createdAt', 'desc')
+        );
       const snap = await getDocs(q);
-      // Assume notifications are fetched and set here
-      // setNotifications(...);
+      const notificationsList = snap.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      console.log('Fetched notifications:', notificationsList);
+      console.log('Current user.uid:', user.uid);
+  setNotifications(notificationsList);
+  console.log('Notifications set in state:', notificationsList);
     } catch (e) {
       setNotifications([]);
     } finally {

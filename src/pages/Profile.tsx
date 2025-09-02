@@ -250,37 +250,50 @@ const Profile = () => {
               <div className="flex-1">
                 <div className="flex items-center gap-3 mb-2">
                   <h1 className="text-3xl font-bold flex items-center gap-2">
-                    {user.role === 'company' ? (profileData.companyName || 'ArenaApp') : profileData.fullName}
-                    {user.role !== 'company' && (
-                      subscribed && expirationDate ? (
-                        // Show blue verified icon if subscribed and not expired, make clickable
-                        <span
-                          className="flex items-center gap-1 border border-blue-600 rounded-full px-3 py-1 bg-blue-50 cursor-pointer"
-                          onClick={() => navigate('/get-verified')}
-                          title="Manage your subscription"
-                        >
-                          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="#2563eb" className="w-4 h-4">
-                            <circle cx="12" cy="12" r="10" stroke="#2563eb" strokeWidth="2" fill="#fff" />
-                            <path strokeLinecap="round" strokeLinejoin="round" stroke="#2563eb" strokeWidth="2" d="M9 12l2 2 4-4" />
-                          </svg>
-                          <span className="text-blue-600 font-medium text-xs">Verified</span>
-                        </span>
-                      ) : (
-                        // Show Get Verified button if not subscribed or expired
-                        <button
-                          className="flex items-center gap-1 focus:outline-none border border-blue-600 rounded-full px-3 py-1 bg-white hover:bg-blue-50 transition"
-                          onClick={() => navigate('/get-verified')}
-                          type="button"
-                          aria-label="Get Verified"
-                        >
-                          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="#2563eb" className="w-4 h-4">
-                            <circle cx="12" cy="12" r="10" stroke="#2563eb" strokeWidth="2" fill="#fff" />
-                            <path strokeLinecap="round" strokeLinejoin="round" stroke="#2563eb" strokeWidth="2" d="M9 12l2 2 4-4" />
-                          </svg>
-                          <span className="text-blue-600 font-medium text-xs">Get Verified</span>
-                        </button>
-                      )
-                    )}
+                    {user.role === 'company'
+                      ? <>{profileData.companyName || 'ArenaApp'}{' '}
+                          <button
+                            className="flex items-center gap-1 focus:outline-none border border-blue-600 rounded-full px-3 py-1 bg-white hover:bg-blue-50 transition"
+                            onClick={() => navigate('/get-verified')}
+                            type="button"
+                            aria-label="Get Verified"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="#2563eb" className="w-4 h-4">
+                              <circle cx="12" cy="12" r="10" stroke="#2563eb" strokeWidth="2" fill="#fff" />
+                              <path strokeLinecap="round" strokeLinejoin="round" stroke="#2563eb" strokeWidth="2" d="M9 12l2 2 4-4" />
+                            </svg>
+                            <span className="text-blue-600 font-medium text-xs">Get Verified</span>
+                          </button>
+                        </>
+                      : <>{profileData.fullName}{' '}
+                          {subscribed && expirationDate ? (
+                            <span
+                              className="flex items-center gap-1 border border-blue-600 rounded-full px-3 py-1 bg-blue-50 cursor-pointer"
+                              onClick={() => navigate('/get-verified')}
+                              title="Manage your subscription"
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="#2563eb" className="w-4 h-4">
+                                <circle cx="12" cy="12" r="10" stroke="#2563eb" strokeWidth="2" fill="#fff" />
+                                <path strokeLinecap="round" strokeLinejoin="round" stroke="#2563eb" strokeWidth="2" d="M9 12l2 2 4-4" />
+                              </svg>
+                              <span className="text-blue-600 font-medium text-xs">Verified</span>
+                            </span>
+                          ) : (
+                            <button
+                              className="flex items-center gap-1 focus:outline-none border border-blue-600 rounded-full px-3 py-1 bg-white hover:bg-blue-50 transition"
+                              onClick={() => navigate('/get-verified')}
+                              type="button"
+                              aria-label="Get Verified"
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="#2563eb" className="w-4 h-4">
+                                <circle cx="12" cy="12" r="10" stroke="#2563eb" strokeWidth="2" fill="#fff" />
+                                <path strokeLinecap="round" strokeLinejoin="round" stroke="#2563eb" strokeWidth="2" d="M9 12l2 2 4-4" />
+                              </svg>
+                              <span className="text-blue-600 font-medium text-xs">Get Verified</span>
+                            </button>
+                          )}
+                        </>
+                    }
                   </h1>
                 </div>
                 {user.role === 'company' ? (
@@ -288,57 +301,67 @@ const Profile = () => {
                     <p className="text-lg text-muted-foreground mb-4 max-w-2xl">
                       {profileData.aboutCompany || 'No bio added yet. Update your profile in Settings to add a bio.'}
                     </p>
-                    <div className="flex flex-col gap-2 text-sm text-muted-foreground">
+                    <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
                       {user.email && (
-                        <div className="flex items-center gap-2">
+                        <span className="flex items-center gap-2">
                           <Mail className="h-4 w-4" />
-                          <span>{user.email}</span>
-                        </div>
+                          {user.email}
+                        </span>
                       )}
-                      {profileData.locationPolicy && (
-                        <div className="flex items-center gap-2">
-                          <MapPin className="h-4 w-4" />
-                          <span>{profileData.locationPolicy}</span>
-                        </div>
-                      )}
-                      <div className="flex items-center gap-2">
+                      <span className="flex items-center gap-2">
                         <Calendar className="h-4 w-4" />
-                        <span>Member Since {formatJoinDate(user.createdAt || '')}</span>
-                      </div>
-                      {(profileData.website || profileData.twitter || profileData.linkedin || profileData.discord) && (
-                        <div className="flex flex-wrap items-center gap-4 mt-2">
-                          {profileData.website && (
-                            <a 
-                              href={profileData.website.startsWith('http') ? profileData.website : `https://${profileData.website}`} 
-                              target="_blank" 
-                              rel="noreferrer" 
-                              className="hover:text-primary transition-colors"
-                            >
-                              {getWebsiteIcon(profileData.website)}
-                            </a>
-                          )}
-                          {profileData.twitter && (
-                            <a href={profileData.twitter} target="_blank" rel="noreferrer" className="hover:text-primary transition-colors">
-                              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor" aria-label="X">
-                                <path d="M18.244 3H21l-6.58 7.51L22.5 21h-6.73l-4.27-5.18L6 21H3.244l6.97-7.96L1.5 3h6.86l3.86 4.7L18.244 3Zm-1.18 16h1.92L8.98 5h-1.94l10.02 14Z"/>
-                              </svg>
-                            </a>
-                          )}
-                          {profileData.linkedin && (
-                            <a href={profileData.linkedin} target="_blank" rel="noreferrer" className="hover:text-primary transition-colors">
-                              <Linkedin className="h-4 w-4" />
-                            </a>
-                          )}
-                          {profileData.discord && (
-                            <a href={profileData.discord} target="_blank" rel="noreferrer" className="hover:text-primary transition-colors">
-                              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor" aria-label="Discord">
-                                <path d="M20.317 4.369A19.791 19.791 0 0 0 16.885 3.1a.486.486 0 0 0-.518.243c-.211.375-.444.864-.608 1.249a18.524 18.524 0 0 0-5.518 0c-.164-.385-.397-.874-.608-1.249a.486.486 0 0 0-.518-.243c-1.432.326-2.814.812-4.112 1.269A.478.478 0 0 0 2 5.77c-1.1 2.042-1.75 4.29-1.75 6.6 0 7.5 6.5 10.5 12.75 10.5s12.75-3 12.75-10.5c0-2.31-.65-4.558-1.75-6.6a.478.478 0 0 0-.433-.401ZM8.02 15.27c-1.18 0-2.15-1.08-2.15-2.41 0-1.33.96-2.41 2.15-2.41s2.15 1.08 2.15 2.41c0 1.33-.96 2.41-2.15 2.41Zm7.96 0c-1.18 0-2.15-1.08-2.15-2.41 0-1.33.96-2.41 2.15-2.41s2.15 1.08 2.15 2.41c0 1.33-.96 2.41-2.15 2.41Z"/>
-                              </svg>
-                            </a>
-                          )}
-                        </div>
+                        Member Since {(() => {
+                          let date = null;
+                          if (user.createdAt) {
+                            date = new Date(user.createdAt);
+                            if (!isNaN(date.getTime())) {
+                              return date.toLocaleString('en-US', { month: 'long', year: 'numeric' });
+                            }
+                          }
+                          return 'Unknown';
+                        })()}
+                      </span>
+                      {profileData.locationPolicy && (
+                        <span className="flex items-center gap-2">
+                          <MapPin className="h-4 w-4" />
+                          {profileData.locationPolicy}
+                        </span>
                       )}
                     </div>
+                    {(profileData.website || profileData.twitter || profileData.linkedin || profileData.discord) && (
+                      <div className="flex flex-wrap items-center gap-4 mt-2">
+                        {profileData.website && (
+                          <a 
+                            href={profileData.website.startsWith('http') ? profileData.website : `https://${profileData.website}`} 
+                            target="_blank" 
+                            rel="noreferrer" 
+                            className="hover:text-primary transition-colors"
+                          >
+                            {getWebsiteIcon(profileData.website)}
+                          </a>
+                        )}
+                        {profileData.twitter && (
+                          <a href={profileData.twitter} target="_blank" rel="noreferrer" className="hover:text-primary transition-colors">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor" aria-label="X">
+                              <path d="M18.244 3H21l-6.58 7.51L22.5 21h-6.73l-4.27-5.18L6 21H3.244l6.97-7.96L1.5 3h6.86l3.86 4.7L18.244 3Zm-1.18 16h1.92L8.98 5h-1.94l10.02 14Z"/>
+                            </svg>
+                          </a>
+                        )}
+                        {profileData.linkedin && (
+                          <a href={profileData.linkedin} target="_blank" rel="noreferrer" className="hover:text-primary transition-colors">
+                            <Linkedin className="h-4 w-4" />
+                          </a>
+                        )}
+                        {profileData.discord && (
+                          <a href={profileData.discord} target="_blank" rel="noreferrer" className="hover:text-primary transition-colors">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor" aria-label="Discord">
+                              <path d="M20.317 4.369A19.791 19.791 0 0 0 16.885 3.1a.486.486 0 0 0-.518.243c-.211.375-.444.864-.608 1.249a18.524 18.524 0 0 0-5.518 0c-.164-.385-.397-.874-.608-1.249a.486.486 0 0 0-.518-.243c-1.432.326-2.814.812-4.112 1.269A.478.478 0 0 0 2 5.77c-1.1 2.042-1.75 4.29-1.75 6.6 0 7.5 6.5 10.5 12.75 10.5s12.75-3 12.75-10.5c0-2.31-.65-4.558-1.75-6.6a.478.478 0 0 0-.433-.401ZM8.02 15.27c-1.18 0-2.15-1.08-2.15-2.41 0-1.33.96-2.41 2.15-2.41s2.15 1.08 2.15 2.41c0 1.33-.96 2.41-2.15 2.41Zm7.96 0c-1.18 0-2.15-1.08-2.15-2.41 0-1.33.96-2.41 2.15-2.41s2.15 1.08 2.15 2.41c0 1.33-.96 2.41-2.15 2.41Z"/>
+                            </svg>
+                          </a>
+                        )}
+                      </div>
+                    )}
+                    {/* Removed duplicate Get Verified button under company profile social links */}
                   </>
                 ) : (
                   <>
@@ -353,28 +376,31 @@ const Profile = () => {
                     )}
                     <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
                       {user.email && (
-                        <div className="flex items-center gap-2">
+                        <span className="flex items-center gap-2">
                           <Mail className="h-4 w-4" />
-                          <span>{user.email}</span>
-                        </div>
+                          {user.email}
+                        </span>
                       )}
-                      {profileData.location ? (
-                        <div className="flex items-center gap-2">
-                          <MapPin className="h-4 w-4" />
-                          <span>{profileData.location}</span>
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-2">
-                          <MapPin className="h-4 w-4" />
-                          <span>No location set</span>
-                        </div>
-                      )}
-                      <div className="flex items-center gap-2">
+                      <span className="flex items-center gap-2">
+                        <MapPin className="h-4 w-4" />
+                        {profileData.location ? profileData.location : 'No location set'}
+                      </span>
+                      <span className="flex items-center gap-2">
                         <Calendar className="h-4 w-4" />
-                        <span>Member Since {formatJoinDate(user.createdAt || '')}</span>
-                      </div>
-                      {profileData.website ? (
-                        <div className="flex items-center gap-2">
+                        Member Since {(() => {
+                          if (user.createdAt) {
+                            const date = new Date(user.createdAt);
+                            if (!isNaN(date.getTime())) {
+                              return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+                            }
+                          }
+                          return 'Recently';
+                        })()}
+                      </span>
+                    </div>
+                    {(profileData.website || profileData.twitter || profileData.linkedin || profileData.discord) && (
+                      <div className="flex flex-wrap items-center gap-4 mt-2">
+                        {profileData.website && (
                           <a 
                             href={profileData.website.startsWith('http') ? profileData.website : `https://${profileData.website}`} 
                             target="_blank" 
@@ -383,23 +409,32 @@ const Profile = () => {
                           >
                             {getWebsiteIcon(profileData.website)}
                           </a>
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-2">
-                          <Globe className="h-4 w-4" />
-                          <span>No website set</span>
-                        </div>
-                      )}
-                    </div>
+                        )}
+                        {profileData.twitter && (
+                          <a href={profileData.twitter} target="_blank" rel="noreferrer" className="hover:text-primary transition-colors">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor" aria-label="X">
+                              <path d="M18.244 3H21l-6.58 7.51L22.5 21h-6.73l-4.27-5.18L6 21H3.244l6.97-7.96L1.5 3h6.86l3.86 4.7L18.244 3Zm-1.18 16h1.92L8.98 5h-1.94l10.02 14Z"/>
+                            </svg>
+                          </a>
+                        )}
+                        {profileData.linkedin && (
+                          <a href={profileData.linkedin} target="_blank" rel="noreferrer" className="hover:text-primary transition-colors">
+                            <Linkedin className="h-4 w-4" />
+                          </a>
+                        )}
+                        {profileData.discord && (
+                          <a href={profileData.discord} target="_blank" rel="noreferrer" className="hover:text-primary transition-colors">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor" aria-label="Discord">
+                              <path d="M20.317 4.369A19.791 19.791 0 0 0 16.885 3.1a.486.486 0 0 0-.518.243c-.211.375-.444.864-.608 1.249a18.524 18.524 0 0 0-5.518 0c-.164-.385-.397-.874-.608-1.249a.486.486 0 0 0-.518-.243c-1.432.326-2.814.812-4.112 1.269A.478.478 0 0 0 2 5.77c-1.1 2.042-1.75 4.29-1.75 6.6 0 7.5 6.5 10.5 12.75 10.5s12.75-3 12.75-10.5c0-2.31-.65-4.558-1.75-6.6a.478.478 0 0 0-.433-.401ZM8.02 15.27c-1.18 0-2.15-1.08-2.15-2.41 0-1.33.96-2.41 2.15-2.41s2.15 1.08 2.15 2.41c0 1.33-.96 2.41-2.15 2.41Zm7.96 0c-1.18 0-2.15-1.08-2.15-2.41 0-1.33.96-2.41 2.15-2.41s2.15 1.08 2.15 2.41c0 1.33-.96 2.41-2.15 2.41Z"/>
+                            </svg>
+                          </a>
+                        )}
+                      </div>
+                    )}
                   </>
                 )}
               </div>
-              <div className="flex gap-2">
-                <Button variant="outline">
-                  <Download className="h-4 w-4 mr-2" />
-                  Download CV
-                </Button>
-              </div>
+              {/* Removed Download CV button for company profile */}
             </div>
           </CardContent>
         </Card>
@@ -648,30 +683,149 @@ const Profile = () => {
               </CardContent>
             </Card>
 
+            {/* Account Status (Job Seeker only) */}
+            {user.role !== 'company' && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Account Status</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm">Account Type</span>
+                    <Badge variant={user.role === 'company' as unknown ? 'default' : 'secondary'}>
+                      {user.role === 'company' as unknown ? 'Company' : 'Job Seeker'}
+                    </Badge>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm">Profile Complete</span>
+                    <Badge variant="default">{calculateProfileCompletion()}%</Badge>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm">Applications</span>
+                    <span className="text-sm font-medium">12</span>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Company sidebar: Connect Wallet, Account Status, Subscription Status */}
+            {user.role === 'company' && (
+              <>
+                {/* Connect Wallet */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">Connect Wallet</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {profileData.walletAddress ? (
+                      <>
+                        <Button
+                          className="w-full flex items-center justify-center gap-2"
+                          variant="destructive"
+                          onClick={async () => {
+                            setProfileData(prev => ({ ...prev, walletAddress: '' }));
+                            setWalletJustConnected(false);
+                            toast.success('Wallet disconnected!');
+                            if (user && user.id) {
+                              const userRef = doc(db, 'users', user.id);
+                              await import('firebase/firestore').then(firestore =>
+                                firestore.updateDoc(userRef, { walletAddress: '' })
+                              );
+                            }
+                          }}
+                        >
+                          <LogOut className="h-4 w-4" />
+                          Disconnect
+                        </Button>
+                        <div className="mt-2 text-xs text-green-600 break-all text-center">
+                          Connected: {getShortAddress(profileData.walletAddress)}
+                        </div>
+                      </>
+                    ) : (
+                      <Button
+                        className="w-full flex items-center justify-center gap-2"
+                        variant="default"
+                        onClick={async () => {
+                          if (!window.ethereum) {
+                            toast.error('MetaMask is not installed.');
+                            return;
+                          }
+                          try {
+                            // Only request accounts when user clicks, not on mount
+                            const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+                            const address = accounts[0];
+                            if (!address) throw new Error('No account found');
+                            setProfileData(prev => ({ ...prev, walletAddress: address }));
+                            setWalletJustConnected(true);
+                            if (user && user.id) {
+                              const userRef = doc(db, 'users', user.id);
+                              await import('firebase/firestore').then(firestore =>
+                                firestore.updateDoc(userRef, { walletAddress: address })
+                              );
+                            }
+                            toast.success('Wallet connected!');
+                          } catch (err) {
+                            toast.error('Failed to connect wallet.');
+                          }
+                        }}
+                      >
+                        <Wallet className="h-4 w-4" />
+                        Connect Wallet
+                      </Button>
+                    )}
+                  </CardContent>
+                </Card>
+                {/* Account Status */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">Account Status</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm">Account Type</span>
+                      <Badge variant="default">Company</Badge>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm">Profile Complete</span>
+                      <Badge variant="default">{calculateProfileCompletion()}%</Badge>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm">Applications</span>
+                      <span className="text-sm font-medium">12</span>
+                    </div>
+                  </CardContent>
+                </Card>
+                {/* Subscription Status */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">Subscription Status</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm">Status</span>
+                      {subscribed ? (
+                        <Badge variant="default" className="flex items-center gap-1">
+                          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="#2563eb" className="w-4 h-4">
+                            <circle cx="12" cy="12" r="10" stroke="#2563eb" strokeWidth="2" fill="#fff" />
+                            <path strokeLinecap="round" strokeLinejoin="round" stroke="#2563eb" strokeWidth="2" d="M9 12l2 2 4-4" />
+                          </svg>
+                          <span>Verified</span>
+                        </Badge>
+                      ) : (
+                        <Badge variant="secondary">Not Verified</Badge>
+                      )}
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm">Expires</span>
+                      <span className="text-sm font-medium">{expirationDate || 'N/A'}</span>
+                    </div>
+                  </CardContent>
+                </Card>
+              </>
+            )}
+
             {/* Account Status */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Account Status</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm">Account Type</span>
-                  <Badge variant={user.role === 'company' ? 'default' : 'secondary'}>
-                    {user.role === 'company' ? 'Company' : 'Job Seeker'}
-                  </Badge>
-                </div>
-                
-                <div className="flex items-center justify-between">
-                  <span className="text-sm">Profile Complete</span>
-                  <Badge variant="default">{calculateProfileCompletion()}%</Badge>
-                </div>
-                
-                <div className="flex items-center justify-between">
-                  <span className="text-sm">Applications</span>
-                  <span className="text-sm font-medium">12</span>
-                </div>
-              </CardContent>
-            </Card>
+        
 
               {/* Connect Wallet (Job Seeker only) */}
               {user.role !== 'company' && (

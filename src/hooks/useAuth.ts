@@ -16,6 +16,7 @@ type Session = null;
 
 export interface AuthUser {
   id: string;
+  uid: string;
   email: string;
   fullName?: string;
   role?: 'admin' | 'moderator' | 'user' | 'company';
@@ -344,6 +345,7 @@ async function mapFirebaseUserToAuthUser(fbUser: FirebaseUser): Promise<AuthUser
   
   return {
     id: fbUser.uid,
+    uid: fbUser.uid,
     email: fbUser.email || '',
     fullName: profile.fullName || fbUser.displayName || undefined,
     role: profile.role || 'user',

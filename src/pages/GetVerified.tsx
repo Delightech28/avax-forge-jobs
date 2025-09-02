@@ -16,7 +16,8 @@ const tiers = [
 			"Access to community forums",
 		],
 		highlight: false,
-		cta: "Current Plan",
+		cta
+		: "Current Plan",
 		disabled: true,
 	},
 	{
@@ -64,6 +65,29 @@ import { getFirestore, doc, getDoc, setDoc } from "firebase/firestore";
 import { useSubscription } from "@/hooks/useSubscription";
 
 const GetVerified = () => {
+		// Add notification to Firestore
+					const addPlanChangeNotification = async (newPlan: string) => {
+						const auth = getAuth();
+						const user = auth.currentUser;
+						if (!user) return;
+						// Use user.id for notification creation to match Notifications page
+						const db = getFirestore();
+						const notificationsRef = doc(db, 'notifications', `${user.uid}-planchange-${Date.now()}`);
+						let planName = '';
+						if (newPlan.includes('Elite')) planName = 'Elite';
+						else if (newPlan.includes('Pro')) planName = 'Pro';
+						else planName = 'Basic';
+						await setDoc(notificationsRef, {
+							userId: user.uid,
+							type: 'plan-change',
+							category: 'plan-change',
+							title: 'Plan Changed',
+							message: `Your account has been changed to the ${planName} plan!`,
+							timestamp: new Date().toLocaleString(),
+							createdAt: new Date().toISOString(),
+							read: false,
+						});
+					};
 	const navigate = useNavigate();
 	const [selected, setSelected] = useState<number | null>(null);
 	const [billingPeriod, setBillingPeriod] = useState<"monthly" | "annual">("monthly");
@@ -158,7 +182,7 @@ const GetVerified = () => {
 				price: "$25 / month",
 				cta:
 					currentPlan === "EliteMonthly" || currentPlan === "EliteAnnual"
-						? "Downgrade to Pro"
+						? "Current Plan"
 						: currentPlan === "ProMonthly" || currentPlan === "ProAnnual"
 						? "Upgrade to Elite"
 						: "Subscribe to Elite",
@@ -177,7 +201,7 @@ const GetVerified = () => {
 				price: "$250 / year",
 				cta:
 					currentPlan === "EliteMonthly" || currentPlan === "EliteAnnual"
-						? "Downgrade to Pro"
+						? "Current Plan"
 						: currentPlan === "ProMonthly" || currentPlan === "ProAnnual"
 						? "Upgrade to Elite"
 						: "Subscribe to Elite",
@@ -400,10 +424,13 @@ const GetVerified = () => {
 							</div>
 							<button
 								className={`w-full py-3 rounded-full font-bold text-lg transition-all duration-150 ${
-									walletAddress ? "bg-white text-black hover:bg-slate-200" : "bg-slate-700 text-slate-400 cursor-not-allowed"
+									walletAddress && getPlanType() !== currentPlan
+										? "bg-white text-black hover:bg-slate-200"
+										: "bg-slate-700 text-slate-400 cursor-not-allowed"
 								}`}
-								disabled={!walletAddress || subLoading}
+								disabled={!walletAddress || subLoading || getPlanType() === currentPlan}
 								onClick={async () => {
+									if (getPlanType() === currentPlan) return;
 									const planType = getPlanType();
 									if (!planType) {
 										toast.error("Invalid plan selection");
@@ -413,12 +440,34 @@ const GetVerified = () => {
 									if (success) {
 										toast.success("Subscription successful!");
 										setShowModal(false);
+										await addPlanChangeNotification(planType);
 									} else {
 										toast.error(subError || "Subscription failed");
+										// Add notification for failed subscription due to low wallet balance
+										try {
+											const auth = getAuth();
+											const user = auth.currentUser;
+											if (user) {
+												const db = getFirestore();
+												const notificationsRef = doc(db, 'notifications', `${user.uid}-lowbalance-${Date.now()}`);
+												await setDoc(notificationsRef, {
+													userId: user.uid,
+													type: 'error',
+													category: 'system',
+													title: 'Subscription Failed',
+													message: 'Subscription failed due to low wallet balance. Please fund your wallet and try again.',
+													timestamp: new Date().toLocaleString(),
+													createdAt: new Date().toISOString(),
+													read: false,
+												});
+											}
+										} catch (firestoreError) {
+											console.error('Failed to create notification:', firestoreError);
+										}
 									}
 								}}
 							>
-								{subLoading ? "Processing..." : "Subscribe & Pay"}
+								{subLoading ? "Processing..." : getPlanType() === currentPlan ? "Current Plan" : "Subscribe & Pay"}
 							</button>
 							{!loadingWallet && (
 								<div className="mt-3 text-center">
