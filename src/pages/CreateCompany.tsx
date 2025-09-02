@@ -56,6 +56,7 @@ const CreateCompany = () => {
         ...formData,
         created_by: user?.id,
         created_at: new Date().toISOString(),
+        verified: 'Basic',
       };
 
       const docRef = await addDoc(collection(db, 'companies'), companyData);

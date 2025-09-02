@@ -49,9 +49,11 @@ const Header = () => {
 
           {/* Navigation */}
           <nav className="hidden md:flex items-center space-x-6">
-            <a href="/jobs" className="text-foreground/80 hover:text-foreground transition-colors">
-              Browse Jobs
-            </a>
+            {user?.role !== 'company' && (
+              <a href="/jobs" className="text-foreground/80 hover:text-foreground transition-colors">
+                Browse Jobs
+              </a>
+            )}
             {user?.role === 'company' && (
               <a href="/post-job" className="text-foreground/80 hover:text-foreground transition-colors">
                 Post a Job

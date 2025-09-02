@@ -53,11 +53,13 @@ const Footer = () => {
               For Job Seekers
             </h4>
             <ul className="space-y-2 text-sm">
-              <li>
-                <Link to="/jobs" className="text-foreground/70 hover:text-foreground transition-colors">
-                  Browse Jobs
-                </Link>
-              </li>
+              {(!user || user.role !== 'company') && (
+                <li>
+                  <Link to="/jobs" className="text-foreground/70 hover:text-foreground transition-colors">
+                    Browse Jobs
+                  </Link>
+                </li>
+              )}
               <li>
                 <span className="text-foreground/50 cursor-not-allowed">
                   Web3 Jobs
