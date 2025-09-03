@@ -1,12 +1,12 @@
 import { useState, useEffect, useCallback } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 // Using Express API instead of Supabase
 import { useAuth } from "@/hooks/useAuth";
 import { db } from '@/integrations/firebase/client';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { MapPin, Clock, DollarSign, Briefcase, ExternalLink, Heart, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
@@ -46,6 +46,7 @@ interface JobDetail {
 const JobDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
   const [job, setJob] = useState<JobDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -105,12 +106,16 @@ const JobDetail = () => {
           location: "",
           size_range: "",
           industry: ""
-        }
+        },
       });
     } catch (error) {
       console.error("Error fetching job:", error);
       toast.error("Job not found");
-      navigate("/jobs");
+      if (user?.role === 'company') {
+        navigate("/");
+      } else {
+        navigate("/jobs");
+      }
     } finally {
       setLoading(false);
     }
@@ -218,12 +223,10 @@ const JobDetail = () => {
       <div className="min-h-screen bg-background">
         <Header />
         <main className="container mx-auto px-4 py-8">
-          <div className="text-center">
-            <h1 className="text-2xl font-bold mb-4">Job not found</h1>
-            <Button onClick={() => navigate("/jobs")}>
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Jobs
-            </Button>
+          <div className="text-center flex flex-col items-center justify-center min-h-[40vh]">
+            <h1 className="text-2xl font-bold mb-4">No jobs found</h1>
+            <p className="text-muted-foreground mb-6">Try adjusting your search criteria</p>
+            <Button onClick={() => navigate("/jobs")}>Back to Jobs</Button>
           </div>
         </main>
       </div>
@@ -237,14 +240,26 @@ const JobDetail = () => {
       <Header />
       
       <main className="container mx-auto px-4 py-8">
-        <Button 
-          variant="ghost" 
-          onClick={() => navigate("/jobs")}
-          className="mb-6"
-        >
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to Jobs
-        </Button>
+        {/* Only show Back to Jobs for non-company users; company users see Home button */}
+        {user?.role === 'company' ? (
+          <Button 
+            variant="ghost" 
+            onClick={() => navigate("/")}
+            className="mb-6"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Home
+          </Button>
+        ) : (
+          <Button 
+            variant="ghost" 
+            onClick={() => navigate("/jobs")}
+            className="mb-6"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Jobs
+          </Button>
+        )}
 
   <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Main Content */}

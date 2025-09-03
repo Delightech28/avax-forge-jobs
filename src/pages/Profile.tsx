@@ -669,13 +669,13 @@ const Profile = () => {
                 {user.role === 'company' ? (
                   <>
                     <Button asChild className="w-full">
-                      <a href="/post-job">Manage Jobs</a>
+                      <a href="/manage-jobs">Manage Jobs</a>
                     </Button>
                     <Button asChild variant="outline" className="w-full">
                       <a href="/jobs">View Applicants</a>
                     </Button>
                     <Button asChild variant="outline" className="w-full">
-                      <a href="/settings">Billing & Verification</a>
+                      <a href="/billing">Billing & Verification</a>
                     </Button>
                     <Button asChild variant="outline" className="w-full">
                       <a href="/settings">Settings</a>
@@ -691,6 +691,9 @@ const Profile = () => {
                     </Button>
                     <Button asChild variant="outline" className="w-full">
                       <a href="/settings">Settings</a>
+                    </Button>
+                    <Button asChild variant="outline" className="w-full">
+                      <a href="/billing">Billing & Verification</a>
                     </Button>
                   </>
                 )}

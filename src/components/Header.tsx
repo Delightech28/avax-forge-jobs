@@ -33,6 +33,7 @@ const Header = () => {
   const handleAuthAction = () => {
     if (user) {
       signOut();
+      navigate('/auth');
     } else {
       navigate('/auth');
     }

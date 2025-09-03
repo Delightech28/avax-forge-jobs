@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import Header from "@/components/Header";
 import { db } from '@/integrations/firebase/client';
 import { collection, addDoc, doc as fsDoc, getDoc, serverTimestamp } from 'firebase/firestore';
+import { useJobPayment } from "@/hooks/useJobPayment";
 
 
 
@@ -40,7 +41,10 @@ const PostJob = () => {
   token_symbol: "",
   requires_wallet: false,
   expires_at: "",
+  industry: "",
   });
+
+  const { payAndPostJob, loading: paymentLoading, error: paymentError } = useJobPayment();
 
   useEffect(() => {
     if (loading) return;
@@ -106,7 +110,6 @@ const PostJob = () => {
       toast.error(errors.join(". "));
       return;
     }
-
     setSubmitting(true);
     try {
       // Preflight: ensure authenticated company with users/{uid}.role === 'company'
@@ -117,12 +120,13 @@ const PostJob = () => {
       const userRef = fsDoc(db, 'users', user.id as string);
       const userSnap = await getDoc(userRef);
       if (!userSnap.exists()) {
-        console.warn('[PostJob] users doc not found for uid:', user.id);
         toast.error('Your company profile is not initialized. Please sign out and sign in again.');
         return;
       }
       interface UserData {
         role: string;
+        companyName?: string;
+        verified?: string;
         [key: string]: unknown;
       }
       const userData = userSnap.data() as UserData;
@@ -133,35 +137,25 @@ const PostJob = () => {
       }
 
       const jobData = {
-  ...formData,
-  company_name: userData.companyName || "",
+        ...formData,
+        company_name: userData.companyName || "",
         posted_by: user?.id,
+        companyId: user?.id,
         salary_min: formData.salary_min ? parseInt(formData.salary_min) : null,
         salary_max: formData.salary_max ? parseInt(formData.salary_max) : null,
         skills,
+        industry: formData.industry,
         created_at: new Date().toISOString(),
         expires_at: formData.expires_at ? new Date(formData.expires_at).toISOString() : null,
       };
-
-      const docRef = await addDoc(collection(db, 'jobs'), jobData);
+      // Use payment hook
+      const verifiedLevel = userData.verified || "Basic";
+      const result = await payAndPostJob({ verifiedLevel, jobData });
       toast.success("Job posted successfully!");
-      navigate(`/jobs/${docRef.id}`);
+      navigate(`/jobs/${result.jobId}`, { state: { fromPostJob: true } });
     } catch (error) {
       console.error("Error posting job:", error);
-      try {
-        const err = error as { code?: string; message?: string };
-        console.log('[PostJob] Firestore error code:', err?.code, 'message:', err?.message);
-      } catch {
-        // Intentionally left blank: error object may not be useful here
-      }
-      const message =
-        (typeof error === "object" &&
-          error !== null &&
-          "code" in error &&
-          (error as { code?: string }).code === "permission-denied")
-          ? 'Insufficient permissions. Ensure you are signed in as a company and try again.'
-          : 'Failed to post job';
-      toast.error(message);
+      toast.error(paymentError || "Failed to post job");
     } finally {
       setSubmitting(false);
     }
@@ -234,8 +228,6 @@ const PostJob = () => {
               Reach thousands of qualified developers and professionals.
             </p>
           </div>
-
-          
 
           <form onSubmit={handleSubmit} className="space-y-8">
             {/* Basic Information */}
@@ -342,17 +334,50 @@ const PostJob = () => {
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="location">Location</Label>
-                  <div className="relative">
-                    <MapPin className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="location"
-                      value={formData.location}
-                      onChange={(e) => handleInputChange("location", e.target.value)}
-                      placeholder="e.g. San Francisco, CA or Remote"
-                      className="pl-10"
-                    />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="location">Location</Label>
+                    <div className="relative">
+                      <MapPin className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        id="location"
+                        value={formData.location}
+                        onChange={(e) => handleInputChange("location", e.target.value)}
+                        placeholder="e.g. San Francisco, CA or Remote"
+                        className="pl-10"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="industry">Industry</Label>
+                    <Select
+                      value={formData.industry}
+                      onValueChange={(value) => handleInputChange("industry", value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select or search industry" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {/* Web2 Industries */}
+                        <SelectItem value="Software">Software</SelectItem>
+                        <SelectItem value="Fintech">Fintech</SelectItem>
+                        <SelectItem value="E-commerce">E-commerce</SelectItem>
+                        <SelectItem value="Healthcare">Healthcare</SelectItem>
+                        <SelectItem value="Education">Education</SelectItem>
+                        <SelectItem value="Gaming">Gaming</SelectItem>
+                        <SelectItem value="Media">Media</SelectItem>
+                        <SelectItem value="Telecommunications">Telecommunications</SelectItem>
+                        {/* Web3 Industries */}
+                        <SelectItem value="Blockchain">Blockchain</SelectItem>
+                        <SelectItem value="DeFi">DeFi</SelectItem>
+                        <SelectItem value="NFTs">NFTs</SelectItem>
+                        <SelectItem value="DAOs">DAOs</SelectItem>
+                        <SelectItem value="Metaverse">Metaverse</SelectItem>
+                        <SelectItem value="Web3 Gaming">Web3 Gaming</SelectItem>
+                        <SelectItem value="Crypto">Crypto</SelectItem>
+                        <SelectItem value="Identity">Identity</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
               </CardContent>

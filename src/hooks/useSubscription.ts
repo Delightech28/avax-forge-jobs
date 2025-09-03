@@ -38,10 +38,26 @@ export function useSubscription(userId?: string, walletAddress?: string) {
       setActivePlan(plan);
       // Update Firestore verified status
       if (userId) {
-        await updateDoc(doc(db, 'users', userId), {
-          verified: plan,
-          subscriptionExpiration: Number(exp),
-        });
+        try {
+          await updateDoc(doc(db, 'users', userId), {
+            verified: plan,
+            subscriptionExpiration: Number(exp),
+          });
+          // Store transaction history in Firestore
+          const { addDoc, collection } = await import('firebase/firestore');
+          await addDoc(collection(db, 'transactions'), {
+            userId,
+            type: 'Subscription',
+            plan,
+            amount: Number(price) / 1e18, // assuming price is in wei
+            date: new Date().toISOString(),
+            description: `Subscribed to ${plan}`,
+            txHash: tx.hash,
+          });
+        } catch (firestoreErr) {
+          // Log Firestore errors but do not set error state
+          console.error('Firestore transaction history error:', firestoreErr);
+        }
       }
       return true;
     } catch (err) {
