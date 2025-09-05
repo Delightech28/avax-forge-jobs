@@ -61,7 +61,7 @@ import { Ethereum } from "../types/ethereum";
 import React, { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { getAuth } from "firebase/auth";
-import { getFirestore, doc, getDoc, setDoc } from "firebase/firestore";
+import { getFirestore, doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 import { useSubscription } from "@/hooks/useSubscription";
 
 const GetVerified = () => {
@@ -84,7 +84,7 @@ const GetVerified = () => {
 							title: 'Plan Changed',
 							message: `Your account has been changed to the ${planName} plan!`,
 							timestamp: new Date().toLocaleString(),
-							createdAt: new Date().toISOString(),
+							createdAt: serverTimestamp(),
 							read: false,
 						});
 					};
@@ -457,7 +457,7 @@ const GetVerified = () => {
 													title: 'Subscription Failed',
 													message: 'Subscription failed due to low wallet balance. Please fund your wallet and try again.',
 													timestamp: new Date().toLocaleString(),
-													createdAt: new Date().toISOString(),
+													createdAt: serverTimestamp(),
 													read: false,
 												});
 											}

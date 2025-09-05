@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Bell, CheckCircle, XCircle, AlertTriangle, Info, Clock, Settings } from "lucide-react";
 import { db } from '@/integrations/firebase/client';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { useAuth } from '@/hooks/useAuth';
 
 type NotificationPrefs = {
@@ -47,11 +47,11 @@ const Notifications = () => {
           where('userId', '==', user.uid),
           orderBy('createdAt', 'desc')
         );
-      const snap = await getDocs(q);
-      const notificationsList = snap.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
+        const snap = await getDocs(q);
+        const notificationsList = snap.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
       console.log('Fetched notifications:', notificationsList);
       console.log('Current user.uid:', user.uid);
   setNotifications(notificationsList);
@@ -65,8 +65,10 @@ const Notifications = () => {
     fetchNotifications();
   }, [user]);
 
-  const [filter, setFilter] = useState('all');
-  const [showUnreadOnly, setShowUnreadOnly] = useState(false);
+  const [filter, setFilter] = useState(''); // No 'all' filter
+  // Only unique categories, no 'all'
+  const categories = Array.from(new Set(notifications.map(n => n.category)));
+  const [showUnreadOnly, setShowUnreadOnly] = useState(true); // Show unread only by default
   const [prefs, setPrefs] = useState({
     email: { application: true, matches: true, updates: true, marketing: false },
     push: { status: true, messages: true, recommendations: false, reminders: false },
@@ -168,7 +170,7 @@ const Notifications = () => {
 
   const filteredNotifications = notifications.filter(notification => {
     if (showUnreadOnly && notification.read) return false;
-    if (filter !== 'all' && notification.category !== filter) return false;
+    if (filter && notification.category !== filter) return false;
     return true;
   });
 
@@ -210,60 +212,22 @@ const Notifications = () => {
           <CardContent className="p-6">
             <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
               <div className="flex flex-wrap gap-2">
-                <button
-                  onClick={() => setFilter('all')}
-                  className={`px-4 py-2 rounded-full border transition-colors ${
-                    filter === 'all' 
-                      ? 'bg-primary text-primary-foreground border-primary' 
-                      : 'border-primary/30 text-foreground/70 hover:bg-primary/10 hover:border-primary/50'
-                  }`}
-                >
-                  All
-                </button>
-                <button
-                  onClick={() => setFilter('application')}
-                  className={`px-4 py-2 rounded-full border transition-colors ${
-                    filter === 'application' 
-                      ? 'bg-primary text-primary-foreground border-primary' 
-                      : 'border-primary/30 text-foreground/70 hover:bg-primary/10 hover:border-primary/50'
-                  }`}
-                >
-                  Applications
-                </button>
-                <button
-                  onClick={() => setFilter('job_match')}
-                  className={`px-4 py-2 rounded-full border transition-colors ${
-                    filter === 'job_match' 
-                      ? 'bg-primary text-primary-foreground border-primary' 
-                      : 'border-primary/30 text-foreground/70 hover:bg-primary/10 hover:border-primary/50'
-                  }`}
-                >
-                  Job Matches
-                </button>
-                <button
-                  onClick={() => setFilter('reminder')}
-                  className={`px-4 py-2 rounded-full border transition-colors ${
-                    filter === 'reminder' 
-                      ? 'bg-primary text-primary-foreground border-primary' 
-                      : 'border-primary/30 text-foreground/70 hover:bg-primary/10 hover:border-primary/50'
-                  }`}
-                >
-                  Reminders
-                </button>
+                {categories.map(cat => (
+                  <button
+                    key={cat}
+                    onClick={() => setFilter(cat)}
+                    className={`px-4 py-2 rounded-full border transition-colors ${
+                      filter === cat
+                        ? 'bg-primary text-primary-foreground border-primary'
+                        : 'border-primary/30 text-foreground/70 hover:bg-primary/10 hover:border-primary/50'
+                    }`}
+                  >
+                    {cat.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                  </button>
+                ))}
               </div>
               
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  id="unreadOnly"
-                  checked={showUnreadOnly}
-                  onChange={(e) => setShowUnreadOnly(e.target.checked)}
-                  className="rounded border-primary/30 text-primary focus:ring-primary"
-                />
-                <label htmlFor="unreadOnly" className="text-sm text-foreground/70">
-                  Show unread only
-                </label>
-              </div>
+              {/* Removed old unread checkbox, only show Unread/Read toggle buttons above */}
             </div>
           </CardContent>
         </Card>
@@ -307,6 +271,28 @@ const Notifications = () => {
                           <h3 className={`font-semibold text-lg ${
                             notification.read ? 'text-foreground/70' : 'text-foreground'
                           }`}>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setShowUnreadOnly(true)}
+                        className={`px-4 py-2 rounded-full border transition-colors ${
+                          showUnreadOnly
+                            ? 'bg-primary text-primary-foreground border-primary'
+                            : 'border-primary/30 text-foreground/70 hover:bg-primary/10 hover:border-primary/50'
+                        }`}
+                      >
+                        Unread
+                      </button>
+                      <button
+                        onClick={() => setShowUnreadOnly(false)}
+                        className={`px-4 py-2 rounded-full border transition-colors ${
+                          !showUnreadOnly
+                            ? 'bg-primary text-primary-foreground border-primary'
+                            : 'border-primary/30 text-foreground/70 hover:bg-primary/10 hover:border-primary/50'
+                        }`}
+                      >
+                        Read
+                      </button>
+                    </div>
                             {notification.title}
                           </h3>
                           {!notification.read && (
@@ -319,7 +305,10 @@ const Notifications = () => {
                         <div className="flex items-center gap-2">
                           <span className="text-sm text-foreground/50 flex items-center gap-1">
                             <Clock className="h-3 w-3" />
-                            {notification.timestamp}
+                            {/* Use Firestore Timestamp if available, fallback to string */}
+                            {notification.createdAt && typeof notification.createdAt.toDate === 'function'
+                              ? notification.createdAt.toDate().toLocaleString()
+                              : notification.timestamp || ''}
                           </span>
                         </div>
                       </div>
@@ -425,3 +414,17 @@ const Notifications = () => {
 };
 
 export default Notifications;
+
+/* Example: How to create a notification with Firestore Timestamp
+import { addDoc, collection } from 'firebase/firestore';
+await addDoc(collection(db, 'notifications'), {
+  userId: user.uid,
+  type: 'info',
+  category: 'application',
+  title: 'New Notification',
+  message: 'You have a new notification!',
+  timestamp: new Date().toLocaleString(),
+  createdAt: serverTimestamp(),
+  read: false,
+});
+*/

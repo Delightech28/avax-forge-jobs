@@ -7,7 +7,16 @@ import Header from "@/components/Header";
 
 const Billing = () => {
   const { user } = useAuth();
-  const [transactions, setTransactions] = useState<any[]>([]);
+  type Transaction = {
+    id: string;
+    date: string;
+    amount: string | number;
+    type: string;
+    description?: string;
+    // Remove the index signature to avoid using 'any'
+  };
+
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -16,7 +25,16 @@ const Billing = () => {
       const txRef = collection(db, "transactions");
       const q = query(txRef, where("userId", "==", user.id));
       const querySnapshot = await getDocs(q);
-      const txList = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      const txList = querySnapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          date: data.date ?? "",
+          amount: data.amount ?? "",
+          type: data.type ?? "",
+          description: data.description ?? ""
+        };
+      });
       setTransactions(txList);
       setLoading(false);
     };
@@ -56,11 +74,18 @@ const Billing = () => {
                     } catch {
                       formattedDate = tx.date;
                     }
+                    // Format AVAX amount: subscriptions are already in AVAX, job_post is in wei
+                    let avaxAmount = tx.amount;
+                    if (tx.type === 'job_post' && tx.amount && !isNaN(Number(tx.amount))) {
+                      avaxAmount = (Number(tx.amount) / 1e18).toFixed(4);
+                    } else if (tx.type === 'subscription' && tx.amount && !isNaN(Number(tx.amount))) {
+                      avaxAmount = Number(tx.amount).toFixed(4);
+                    }
                     return (
                       <li key={tx.id} className="border rounded p-4 flex flex-col gap-2">
                         <div className="flex justify-between items-center">
-                          <h3 className="font-bold text-lg">{tx.type}</h3>
-                          <span className="text-base font-semibold text-right text-muted-foreground">{tx.amount} AVAX</span>
+                          <h3 className="font-bold text-lg">{tx.type === 'job_post' ? 'Job Post' : tx.type === 'subscription' ? 'Subscription' : tx.type}</h3>
+                          <span className="text-base font-semibold text-right text-muted-foreground">{avaxAmount} AVAX</span>
                         </div>
                         <div className="flex flex-col gap-1">
                           <p className="text-base font-medium">{tx.description}</p>

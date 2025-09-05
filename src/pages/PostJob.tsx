@@ -148,9 +148,12 @@ const PostJob = () => {
         created_at: new Date().toISOString(),
         expires_at: formData.expires_at ? new Date(formData.expires_at).toISOString() : null,
       };
-      // Use payment hook
-      const verifiedLevel = userData.verified || "Basic";
-      const result = await payAndPostJob({ verifiedLevel, jobData });
+  // Map verification levels to contract values
+  let verifiedLevel = userData.verified || "Basic";
+  if (verifiedLevel === "ProMonthly") verifiedLevel = "Pro Monthly";
+  else if (verifiedLevel === "EliteMonthly") verifiedLevel = "Elite Monthly";
+  // Do not convert EliteAnnual
+  const result = await payAndPostJob({ verifiedLevel, jobData });
       toast.success("Job posted successfully!");
       navigate(`/jobs/${result.jobId}`, { state: { fromPostJob: true } });
     } catch (error) {
