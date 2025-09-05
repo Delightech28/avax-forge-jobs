@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNotification } from '@/context/NotificationContext';
 import Header from "@/components/Header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -23,6 +24,17 @@ type NotificationPrefs = {
   };
 };
 
+type Notification = {
+  id: string;
+  read: boolean;
+  type?: string;
+  category?: string;
+  title?: string;
+  message?: string;
+  createdAt?: import('firebase/firestore').Timestamp;
+  timestamp?: string;
+};
+
 const Notifications = () => {
   console.log('Notifications page mounted');
   const { user } = useAuth();
@@ -31,8 +43,9 @@ const Notifications = () => {
   console.log('Notifications page mounted');
   console.log('Notifications page user:', user);
   console.log('Notifications page user:', user);
-  const [notifications, setNotifications] = useState([]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
+  const { setUnreadCount } = useNotification();
 
   useEffect(() => {
   console.log('Notifications useEffect user:', user);
@@ -48,27 +61,36 @@ const Notifications = () => {
           orderBy('createdAt', 'desc')
         );
         const snap = await getDocs(q);
-        const notificationsList = snap.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
-      console.log('Fetched notifications:', notificationsList);
-      console.log('Current user.uid:', user.uid);
-  setNotifications(notificationsList);
-  console.log('Notifications set in state:', notificationsList);
-    } catch (e) {
-      setNotifications([]);
-    } finally {
-      setLoading(false);
-    }
-  };
+        const notificationsList = snap.docs.map(doc => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            read: typeof data.read === 'boolean' ? data.read : false,
+            type: data.type,
+            category: data.category,
+            title: data.title,
+            message: data.message,
+            createdAt: data.createdAt,
+            timestamp: data.timestamp,
+          } as Notification;
+        });
+        setNotifications(notificationsList);
+  // Update unread count immediately after fetching
+  const count = notificationsList.filter(n => !n.read).length;
+  setUnreadCount(count);
+      } catch (e) {
+        setNotifications([]);
+      } finally {
+        setLoading(false);
+      }
+    };
     fetchNotifications();
-  }, [user]);
+  }, [user, setUnreadCount]);
 
   const [filter, setFilter] = useState(''); // No 'all' filter
   // Only unique categories, no 'all'
   const categories = Array.from(new Set(notifications.map(n => n.category)));
-  const [showUnreadOnly, setShowUnreadOnly] = useState(true); // Show unread only by default
+  const [showUnreadOnly, setShowUnreadOnly] = useState(false); // Show all by default
   const [prefs, setPrefs] = useState({
     email: { application: true, matches: true, updates: true, marketing: false },
     push: { status: true, messages: true, recommendations: false, reminders: false },
@@ -77,10 +99,8 @@ const Notifications = () => {
   // Persist unread count to localStorage for the header badge
   useEffect(() => {
     const count = notifications.filter(n => !n.read).length;
-    if (typeof window !== 'undefined') {
-      window.localStorage.setItem('unreadCount', String(count));
-    }
-  }, [notifications]);
+    setUnreadCount(count);
+  }, [notifications, setUnreadCount]);
 
   // Basic unread reset when window gains focus
   useEffect(() => {
@@ -150,20 +170,47 @@ const Notifications = () => {
     }
   };
 
-  const markAsRead = (id: number) => {
-    setNotifications(prev => 
-      prev.map(notification => 
-        notification.id === id 
-          ? { ...notification, read: true }
-          : notification
-      )
-    );
+  const markAsRead = async (id: string) => {
+    // Update Firestore
+    try {
+      const { updateDoc, doc } = await import('firebase/firestore');
+      await updateDoc(doc(db, 'notifications', id), { read: true });
+      // Refetch notifications
+      if (user) {
+        const { collection, query, where, orderBy, getDocs } = await import('firebase/firestore');
+        const q = query(
+          collection(db, 'notifications'),
+          where('userId', '==', user.uid),
+          orderBy('createdAt', 'desc')
+        );
+        const snap = await getDocs(q);
+        const notificationsList = snap.docs.map(doc => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            read: typeof data.read === 'boolean' ? data.read : false,
+            type: data.type,
+            category: data.category,
+            title: data.title,
+            message: data.message,
+            createdAt: data.createdAt,
+            timestamp: data.timestamp,
+          } as Notification;
+        });
+        setNotifications(notificationsList);
+        setUnreadCount(notificationsList.filter(n => !n.read).length);
+      }
+    } catch (e) {
+      // Optionally handle error
+    }
   };
 
   const markAllAsRead = () => {
-    setNotifications(prev => 
-      prev.map(notification => ({ ...notification, read: true }))
-    );
+    setNotifications(prev => {
+      const updated = prev.map(notification => ({ ...notification, read: true }));
+      setUnreadCount(0);
+      return updated;
+    });
   };
 
   // Removed delete per requirements
@@ -194,7 +241,7 @@ const Notifications = () => {
           
           <div className="flex items-center gap-3 mt-4 md:mt-0">
             <Badge variant="secondary" className="bg-primary/20 text-primary border-primary/30">
-              {unreadCount} unread
+              {notifications.length} total / {unreadCount} unread
             </Badge>
             <Button 
               variant="outline" 
@@ -226,8 +273,18 @@ const Notifications = () => {
                   </button>
                 ))}
               </div>
-              
-              {/* Removed old unread checkbox, only show Unread/Read toggle buttons above */}
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="showUnreadOnly"
+                  checked={showUnreadOnly}
+                  onChange={e => setShowUnreadOnly(e.target.checked)}
+                  className="rounded border-primary/30 text-primary focus:ring-primary"
+                />
+                <label htmlFor="showUnreadOnly" className="text-sm text-foreground/70">
+                  Show only unread
+                </label>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -268,31 +325,9 @@ const Notifications = () => {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between mb-2">
                         <div className="flex items-center gap-2">
-                          <h3 className={`font-semibold text-lg ${
+                          <h3 className={`font-semibold text-base md:text-lg ${
                             notification.read ? 'text-foreground/70' : 'text-foreground'
                           }`}>
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => setShowUnreadOnly(true)}
-                        className={`px-4 py-2 rounded-full border transition-colors ${
-                          showUnreadOnly
-                            ? 'bg-primary text-primary-foreground border-primary'
-                            : 'border-primary/30 text-foreground/70 hover:bg-primary/10 hover:border-primary/50'
-                        }`}
-                      >
-                        Unread
-                      </button>
-                      <button
-                        onClick={() => setShowUnreadOnly(false)}
-                        className={`px-4 py-2 rounded-full border transition-colors ${
-                          !showUnreadOnly
-                            ? 'bg-primary text-primary-foreground border-primary'
-                            : 'border-primary/30 text-foreground/70 hover:bg-primary/10 hover:border-primary/50'
-                        }`}
-                      >
-                        Read
-                      </button>
-                    </div>
                             {notification.title}
                           </h3>
                           {!notification.read && (
@@ -305,10 +340,10 @@ const Notifications = () => {
                         <div className="flex items-center gap-2">
                           <span className="text-sm text-foreground/50 flex items-center gap-1">
                             <Clock className="h-3 w-3" />
-                            {/* Use Firestore Timestamp if available, fallback to string */}
+                            {/* Show only date, no time */}
                             {notification.createdAt && typeof notification.createdAt.toDate === 'function'
-                              ? notification.createdAt.toDate().toLocaleString()
-                              : notification.timestamp || ''}
+                              ? notification.createdAt.toDate().toLocaleDateString()
+                              : (notification.timestamp ? notification.timestamp.split(',')[0] : '')}
                           </span>
                         </div>
                       </div>
@@ -330,7 +365,6 @@ const Notifications = () => {
                             Mark as read
                           </Button>
                         )}
-                        
                         {/* Delete action removed */}
                       </div>
                     </div>

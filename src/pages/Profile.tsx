@@ -47,8 +47,8 @@ const Profile = () => {
     location: '',
     website: '',
     skills: [] as string[],
-    experience: [] as any[],
-    education: [] as any[],
+    experience: [] as Experience[],
+    education: [] as Education[],
     avatar: '',
     walletAddress: '',
     companyName: '',
@@ -66,6 +66,7 @@ const Profile = () => {
   const [subscribed, setSubscribed] = useState(false);
   const [expirationDate, setExpirationDate] = useState<string | null>(null);
   const [walletJustConnected, setWalletJustConnected] = useState(false);
+  const [walletError, setWalletError] = useState<string | null>(null);
 
   // Always fetch walletAddress from Firestore on mount and when user changes
   useEffect(() => {
@@ -124,7 +125,7 @@ const Profile = () => {
       }
     };
     fetchWalletAndSubscription();
-  }, [user, profileData.walletAddress]);
+  }, [user, profileData.walletAddress, subscribed]);
   
   type Experience = {
     title: string;
@@ -759,36 +760,44 @@ const Profile = () => {
                         </div>
                       </>
                     ) : (
-                      <Button
-                        className="w-full flex items-center justify-center gap-2"
-                        variant="default"
-                        onClick={async () => {
-                          if (!window.ethereum) {
-                            toast.error('MetaMask is not installed.');
-                            return;
-                          }
-                          try {
-                            // Only request accounts when user clicks, not on mount
-                            const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-                            const address = accounts[0];
-                            if (!address) throw new Error('No account found');
-                            setProfileData(prev => ({ ...prev, walletAddress: address }));
-                            setWalletJustConnected(true);
-                            if (user && user.id) {
-                              const userRef = doc(db, 'users', user.id);
-                              await import('firebase/firestore').then(firestore =>
-                                firestore.updateDoc(userRef, { walletAddress: address })
-                              );
+                      <>
+                        <Button
+                          className="w-full flex items-center justify-center gap-2"
+                          variant="default"
+                          onClick={async () => {
+                            setWalletError(null);
+                            if (!window.ethereum) {
+                              setWalletError('MetaMask is not installed.');
+                              toast.error('MetaMask is not installed.');
+                              return;
                             }
-                            toast.success('Wallet connected!');
-                          } catch (err) {
-                            toast.error('Failed to connect wallet.');
-                          }
-                        }}
-                      >
-                        <Wallet className="h-4 w-4" />
-                        Connect Wallet
-                      </Button>
+                            try {
+                              // Only request accounts when user clicks, not on mount
+                              const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+                              const address = accounts[0];
+                              if (!address) throw new Error('No account found');
+                              setProfileData(prev => ({ ...prev, walletAddress: address }));
+                              setWalletJustConnected(true);
+                              if (user && user.id) {
+                                const userRef = doc(db, 'users', user.id);
+                                await import('firebase/firestore').then(firestore =>
+                                  firestore.updateDoc(userRef, { walletAddress: address })
+                                );
+                              }
+                              toast.success('Wallet connected!');
+                            } catch (err) {
+                              setWalletError('Failed to connect wallet. Please try again.');
+                              toast.error('Failed to connect wallet.');
+                            }
+                          }}
+                        >
+                          <Wallet className="h-4 w-4" />
+                          Connect Wallet
+                        </Button>
+                        {walletError && (
+                          <div className="mt-2 text-xs text-red-600 text-center">{walletError}</div>
+                        )}
+                      </>
                     )}
                   </CardContent>
                 </Card>

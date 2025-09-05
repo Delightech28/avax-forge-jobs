@@ -43,9 +43,9 @@ const Header = () => {
     <header className="sticky top-0 z-50 w-full border-b border-border/40 glass-card">
       <div className="container mx-auto px-4 py-4">
         <div className="flex items-center justify-between">
-          {/* Logo */}
+          {/* Logo - use image from public folder, clickable to go home */}
           <div className="flex items-center space-x-2 cursor-pointer" onClick={() => navigate('/') }>
-            <h1 className="text-xl font-bold gradient-text">AVAX Forge Jobs</h1>
+            <img src="/logo.png" alt="Logo" className="h-10 w-10 rounded-full object-cover" />
           </div>
 
           {/* Navigation */}
@@ -62,7 +62,7 @@ const Header = () => {
             )}
           </nav>
 
-          {/* Right side actions */}
+          {/* Right side actions - restore to original position */}
           <div className="flex items-center space-x-4">
             {user && (
               <>
@@ -93,7 +93,6 @@ const Header = () => {
                 </Button>
               </>
             )}
-            
             {user ? (
               <div className="flex items-center space-x-2">
                 <div className="relative">
@@ -103,7 +102,6 @@ const Header = () => {
                       {user.fullName?.charAt(0) || user.profile?.full_name?.charAt(0) || user.email?.charAt(0) || 'U'}
                     </AvatarFallback>
                   </Avatar>
-
                 </div>
                 <Button 
                   variant="ghost" 
@@ -123,8 +121,6 @@ const Header = () => {
                 Sign In
               </Button>
             )}
-            
-            {/* Remove duplicate logout icon for mobile */}
           </div>
         </div>
       </div>

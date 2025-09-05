@@ -71,6 +71,21 @@ const JobDetail = () => {
     checkSaved();
   }, [user, job?.id]);
 
+  // Check if user has already applied for this job
+  useEffect(() => {
+    const checkApplied = async () => {
+      if (!user || !job?.id) return;
+      try {
+        const appliedRef = doc(db, 'users', user.id as string, 'applied_jobs', job.id);
+        const appliedSnap = await getDoc(appliedRef);
+        setHasApplied(appliedSnap.exists());
+      } catch {
+        // Ignore errors
+      }
+    };
+    checkApplied();
+  }, [user, job?.id]);
+
   // import { useCallback } from "react"; // moved to top
 
   const fetchJob = useCallback(async () => {
@@ -119,7 +134,7 @@ const JobDetail = () => {
     } finally {
       setLoading(false);
     }
-  }, [id, navigate]);
+  }, [id, navigate, user?.role]);
 
   const checkApplicationStatus = useCallback(async () => {
     // Implement if you add applications subcollection in Firestore
@@ -148,12 +163,35 @@ const JobDetail = () => {
       navigate('/profile');
       return;
     }
-
     setApplying(true);
     try {
-      // Implement if you add applications subcollection in Firestore
+      // Save application in Firestore
+      const appliedRef = doc(db, 'users', user.id as string, 'applied_jobs', job.id);
+      await setDoc(appliedRef, {
+        jobId: job.id,
+        appliedAt: new Date().toISOString(),
+      });
       setHasApplied(true);
-      toast.success('Application submitted successfully! (local)');
+      // Send notification to company
+      if (job.companies?.id) {
+        try {
+          const { addDoc, collection, serverTimestamp } = await import('firebase/firestore');
+          await addDoc(collection(db, 'notifications'), {
+            userId: job.companies.id,
+            type: 'application',
+            category: 'application',
+            title: 'New Job Application',
+            message: `${user.fullName || user.email || 'A user'} has applied for your job: ${job.title}`,
+            timestamp: new Date().toLocaleDateString(),
+            createdAt: serverTimestamp(),
+            read: false,
+          });
+          console.log('Notification created for company:', job.companies.id);
+        } catch (notifError) {
+          console.error('Failed to create notification:', notifError);
+        }
+      }
+      toast.success('Application submitted successfully!');
     } catch (error: unknown) {
       toast.error('Failed to submit application');
     } finally {
