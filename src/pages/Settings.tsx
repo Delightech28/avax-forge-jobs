@@ -25,6 +25,8 @@ import {
   X,
   Check,
   Plus,
+  ChevronUp,
+  ChevronDown,
   BookOpen,
   Code,
   Award,
@@ -64,6 +66,14 @@ const Settings = () => {
     period: string;
     description: string;
   };
+  type Certification = {
+    title: string;
+    issuer: string;
+    date: string; // e.g. 2022 or Jun 2022
+    credentialId?: string;
+    credentialUrl?: string;
+    description?: string;
+  };
   const [profileData, setProfileData] = useState({
     fullName: user?.fullName || "",
     bio: "",
@@ -86,7 +96,33 @@ const Settings = () => {
     companySize: "",
     visionCulture: "",
     contactEmail: "",
+  certifications: [] as Certification[],
   });
+  // Determine verification & role flags (profile 'verified' comes from Firestore via useAuth or profileData)
+  const userVerifiedLevel: string = (user && (user as unknown as Record<string, unknown>)['verified']) as string || (profileData as unknown as Record<string, unknown>)['verified'] as string || 'Basic';
+  const verifiedPlans = ['ProMonthly', 'ProAnnual', 'EliteMonthly', 'EliteAnnual'];
+  const isVerifiedUser = verifiedPlans.includes(userVerifiedLevel);
+  const isCompany = user?.role === 'company';
+  const MAX_WEBSITES = 5;
+  const MAX_URL_LENGTH = 200;
+
+  const normalizeUrl = (raw: string): string | null => {
+    if (!raw) return null;
+    let trimmed = raw.trim();
+    if (!trimmed) return null;
+    // If it starts with // treat as http
+    if (trimmed.startsWith('//')) trimmed = `https:${trimmed}`;
+    // If missing scheme, prepend https://
+    if (!/^https?:\/\//i.test(trimmed)) {
+      trimmed = `https://${trimmed}`;
+    }
+    try {
+      const u = new URL(trimmed);
+      return u.href;
+    } catch {
+      return null;
+    }
+  };
   const [newSkill, setNewSkill] = useState("");
   const [newExperience, setNewExperience] = useState<Experience>({
     title: "",
@@ -100,6 +136,68 @@ const Settings = () => {
     period: "",
     description: ""
   });
+  const [newCertification, setNewCertification] = useState<Certification>({
+    title: "",
+    issuer: "",
+    date: "",
+    credentialId: "",
+    credentialUrl: "",
+    description: "",
+  });
+  const [editingCertificationIndex, setEditingCertificationIndex] = useState<number | null>(null);
+  const [editCertification, setEditCertification] = useState<Certification | null>(null);
+  const [certUrlError, setCertUrlError] = useState<string | null>(null);
+  const [editCertUrlError, setEditCertUrlError] = useState<string | null>(null);
+
+  // For verified users we allow multiple website links during edit. Non-verified users get one input bound to profileData.website.
+  const [websiteLinks, setWebsiteLinks] = useState<string[]>([]);
+  const [websiteErrors, setWebsiteErrors] = useState<string[]>([]);
+  const [singleWebsiteError, setSingleWebsiteError] = useState<string | null>(null);
+
+  const validateSingle = (raw: string): string | null => {
+    if (!raw || !raw.trim()) return null;
+    if (raw.length > MAX_URL_LENGTH) return `URL must be <= ${MAX_URL_LENGTH} chars`;
+    const n = normalizeUrl(raw);
+    return n ? null : 'Invalid URL';
+  };
+
+  const validateAtIndex = (idx: number, raw: string) => {
+    const err = (!raw || !raw.trim()) ? 'URL is required' : (raw.length > MAX_URL_LENGTH ? `URL must be <= ${MAX_URL_LENGTH} chars` : (normalizeUrl(raw) ? null : 'Invalid URL'));
+    setWebsiteErrors(prev => {
+      const copy = [...prev];
+      copy[idx] = err || '';
+      return copy;
+    });
+  };
+
+  const moveUp = (i: number) => {
+    if (i <= 0) return;
+    setWebsiteLinks(prev => {
+      const a = [...prev];
+      [a[i-1], a[i]] = [a[i], a[i-1]];
+      return a;
+    });
+    setWebsiteErrors(prev => {
+      const a = [...prev];
+      [a[i-1], a[i]] = [a[i], a[i-1]];
+      return a;
+    });
+  };
+
+  const moveDown = (i: number) => {
+    setWebsiteLinks(prev => {
+      if (i >= prev.length - 1) return prev;
+      const a = [...prev];
+      [a[i+1], a[i]] = [a[i], a[i+1]];
+      return a;
+    });
+    setWebsiteErrors(prev => {
+      if (i >= prev.length - 1) return prev;
+      const a = [...prev];
+      [a[i+1], a[i]] = [a[i], a[i+1]];
+      return a;
+    });
+  };
 
   const loadProfileData = React.useCallback(async () => {
     if (!user) return;
@@ -108,7 +206,7 @@ const Settings = () => {
       const userSnap = await getDoc(userRef);
       if (userSnap.exists()) {
         const data = userSnap.data();
-        setProfileData({
+  setProfileData({
           fullName: data.fullName || user.fullName || "",
           bio: data.bio || "",
           location: data.location || "",
@@ -129,7 +227,14 @@ const Settings = () => {
           companySize: data.companySize || "",
           visionCulture: data.visionCulture || "",
           contactEmail: data.contactEmail || data.email || user.email || "",
+          certifications: data.certifications || [],
         });
+
+        // Initialize websiteLinks for verified users if available
+        const sites = data.websites || (data.website ? [data.website] : []);
+        const arr = Array.isArray(sites) ? sites : [];
+        setWebsiteLinks(arr);
+        setWebsiteErrors(arr.map(() => ''));
       }
     } catch (error: unknown) {
       console.error('Error loading profile data:', error);
@@ -164,52 +269,70 @@ const Settings = () => {
     setLoading(true);
     try {
       const userRef = doc(db, 'users', user.id as string);
-      const updateData: {
-        fullName: string;
-        bio: string;
-        location: string;
-        website: string;
-        skills: string[];
-        experience: Experience[];
-        education: Education[];
-        companyName: string;
-        companyLogo: string;
-        industry: string;
-        aboutCompany: string;
-        twitter: string;
-        linkedin: string;
-        discord: string;
-        locationPolicy: string;
-        companySize: string;
-        visionCulture: string;
-        contactEmail: string;
-        updated_at: string;
-        avatar?: string;
-      } = {
-        fullName: profileData.fullName,
-        bio: profileData.bio,
-        location: profileData.location,
-        website: profileData.website,
-        skills: profileData.skills,
-        experience: profileData.experience,
-        education: profileData.education,
-        companyName: profileData.companyName,
-        companyLogo: profileData.companyLogo,
-        industry: profileData.industry,
-        aboutCompany: profileData.aboutCompany,
-        twitter: profileData.twitter,
-        linkedin: profileData.linkedin,
-        discord: profileData.discord,
-        locationPolicy: profileData.locationPolicy,
-        companySize: profileData.companySize,
-        visionCulture: profileData.visionCulture,
-        contactEmail: profileData.contactEmail || user.email,
-        updated_at: new Date().toISOString(),
-      };
+  const updateData: {
+    fullName: string;
+    bio: string;
+    location: string;
+    website: string;
+    skills: string[];
+    experience: Experience[];
+    education: Education[];
+    certifications?: Certification[];
+    companyName: string;
+    companyLogo: string;
+    industry: string;
+    aboutCompany: string;
+    twitter: string;
+    linkedin: string;
+    discord: string;
+    locationPolicy: string;
+    companySize: string;
+    visionCulture: string;
+    contactEmail: string;
+    updated_at: string;
+    avatar?: string;
+  } = {
+    fullName: profileData.fullName,
+    bio: profileData.bio,
+    location: profileData.location,
+    website: profileData.website,
+    skills: profileData.skills,
+    experience: profileData.experience,
+    education: profileData.education,
+    certifications: profileData.certifications,
+    companyName: profileData.companyName,
+    companyLogo: profileData.companyLogo,
+    industry: profileData.industry,
+    aboutCompany: profileData.aboutCompany,
+    twitter: profileData.twitter,
+    linkedin: profileData.linkedin,
+    discord: profileData.discord,
+    locationPolicy: profileData.locationPolicy,
+    companySize: profileData.companySize,
+    visionCulture: profileData.visionCulture,
+    contactEmail: profileData.contactEmail,
+    updated_at: new Date().toISOString(),
+  };
 
       // Include avatar if it exists (both URL and base64 are allowed)
       if (profileData.avatar) {
         updateData.avatar = profileData.avatar;
+      }
+      // Persist websites array for verified users; always keep website for compatibility
+      if (websiteLinks && websiteLinks.length > 0) {
+        // normalize and validate
+        const normalized: string[] = [];
+        for (let i = 0; i < websiteLinks.length && normalized.length < MAX_WEBSITES; i++) {
+          const n = normalizeUrl(websiteLinks[i] || '');
+          if (n) normalized.push(n);
+        }
+        if (normalized.length > 0) {
+          (updateData as Record<string, unknown>)['websites'] = normalized;
+          updateData.website = normalized[0];
+        }
+      } else if (profileData.website) {
+        const n = normalizeUrl(profileData.website);
+        updateData.website = n || profileData.website;
       }
       await updateDoc(userRef, updateData);
       setEditing(false);
@@ -271,6 +394,112 @@ const Settings = () => {
       ...prev,
       education: prev.education.filter((_, i) => i !== index)
     }));
+  };
+
+  // Certifications
+  const addCertification = () => {
+    if (!newCertification.title || !newCertification.issuer) {
+      toast.error('Please provide certification title and issuer');
+      return;
+    }
+    // Validate credential URL if provided
+    let normalizedUrl: string | null = null;
+    if (newCertification.credentialUrl && newCertification.credentialUrl.trim()) {
+      normalizedUrl = normalizeUrl(newCertification.credentialUrl.trim());
+      if (!normalizedUrl) {
+        setCertUrlError('Invalid URL');
+        toast.error('Credential URL is invalid');
+        return;
+      }
+    }
+
+    const certToAdd: Certification = {
+      ...newCertification,
+      credentialUrl: normalizedUrl || newCertification.credentialUrl || ''
+    };
+
+    const updated = [...(profileData.certifications || []), certToAdd];
+    setProfileData(prev => ({ ...prev, certifications: updated }));
+    setNewCertification({ title: '', issuer: '', date: '', credentialId: '', credentialUrl: '', description: '' });
+    setCertUrlError(null);
+
+    // Persist immediately to Firestore
+    (async () => {
+      if (!user) return;
+      try {
+        const userRef = doc(db, 'users', user.id as string);
+        await updateDoc(userRef, { certifications: updated, updated_at: new Date().toISOString() });
+        toast.success('Certification saved');
+      } catch (err) {
+        console.error('Failed to save certification:', err);
+        toast.error('Failed to save certification');
+      }
+    })();
+  };
+
+  const removeCertification = (index: number) => {
+    const updated = (profileData.certifications || []).filter((_, i) => i !== index);
+    setProfileData(prev => ({ ...prev, certifications: updated }));
+
+    (async () => {
+      if (!user) return;
+      try {
+        const userRef = doc(db, 'users', user.id as string);
+        await updateDoc(userRef, { certifications: updated, updated_at: new Date().toISOString() });
+        toast.success('Certification removed');
+      } catch (err) {
+        console.error('Failed to remove certification:', err);
+        toast.error('Failed to remove certification');
+      }
+    })();
+  };
+
+  const startEditCertification = (index: number) => {
+    const cert = (profileData.certifications || [])[index];
+    if (!cert) return;
+    setEditCertification({ ...cert });
+    setEditingCertificationIndex(index);
+    setEditCertUrlError(null);
+  };
+
+  const cancelEditCertification = () => {
+    setEditingCertificationIndex(null);
+    setEditCertification(null);
+    setEditCertUrlError(null);
+  };
+
+  const saveEditedCertification = async (index: number) => {
+    if (!editCertification) return;
+    if (!editCertification.title || !editCertification.issuer) {
+      toast.error('Please provide certification title and issuer');
+      return;
+    }
+    // validate credential url if present
+    let normalizedUrl: string | null = null;
+    if (editCertification.credentialUrl && editCertification.credentialUrl.trim()) {
+      normalizedUrl = normalizeUrl(editCertification.credentialUrl.trim());
+      if (!normalizedUrl) {
+        setEditCertUrlError('Invalid URL');
+        toast.error('Credential URL is invalid');
+        return;
+      }
+    }
+
+    const updatedCert: Certification = { ...editCertification, credentialUrl: normalizedUrl || editCertification.credentialUrl || '' };
+    const newList = (profileData.certifications || []).map((c, i) => i === index ? updatedCert : c);
+    setProfileData(prev => ({ ...prev, certifications: newList }));
+    setEditingCertificationIndex(null);
+    setEditCertification(null);
+
+    try {
+      if (!user) return;
+      const userRef = doc(db, 'users', user.id as string);
+      await updateDoc(userRef, { certifications: newList, updated_at: new Date().toISOString() });
+      toast.success('Certification updated');
+    } catch (err) {
+      console.error('Failed to update certification:', err);
+      toast.error('Failed to update certification');
+    }
   };
 
   const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -597,20 +826,22 @@ const Settings = () => {
                 </div>
 
                 <div>
-                  <Label htmlFor="bio">Bio (100 characters max)</Label>
+                  <Label htmlFor="bio">{isCompany ? 'Bio' : isVerifiedUser ? 'Bio' : 'Bio (100 characters max)'}</Label>
                   {editing ? (
                     <div className="relative">
                       <Textarea
                         id="bio"
                         value={profileData.bio}
                         onChange={(e) => setProfileData(prev => ({ ...prev, bio: e.target.value }))}
-                        placeholder="Tell us about yourself"
-                        maxLength={100}
+                        placeholder={isCompany ? 'Tell us about your company' : 'Tell us about yourself'}
+                        {...(!isVerifiedUser && !isCompany ? { maxLength: 100 } : {})}
                         className="pr-16"
                       />
-                      <div className="absolute bottom-2 right-2 text-xs text-muted-foreground">
-                        {100 - profileData.bio.length} remaining
-                      </div>
+                      {(!isVerifiedUser && !isCompany) && (
+                        <div className="absolute bottom-2 right-2 text-xs text-muted-foreground">
+                          {100 - profileData.bio.length} remaining
+                        </div>
+                      )}
                     </div>
                   ) : (
                     <p className="text-sm text-muted-foreground py-2">{profileData.bio || "No bio yet"}</p>
@@ -634,14 +865,93 @@ const Settings = () => {
                 <div>
                   <Label htmlFor="website">Website</Label>
                   {editing ? (
-                    <Input
-                      id="website"
-                      value={profileData.website}
-                      onChange={(e) => setProfileData(prev => ({ ...prev, website: e.target.value }))}
-                      placeholder="Enter your website URL"
-                    />
+                    // If user is verified and not a company, allow multiple links
+                    (isVerifiedUser && !isCompany) ? (
+                      <div className="space-y-2">
+                        {websiteLinks.length === 0 && (
+                          <div className="flex items-center gap-2">
+                            <Input
+                              value={''}
+                              onChange={(e) => setWebsiteLinks([e.target.value])}
+                              placeholder="Enter your website URL"
+                            />
+                            <Button size="sm" onClick={() => setWebsiteLinks([''])}>
+                              <Plus className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        )}
+                        {websiteLinks.map((site, idx) => (
+                          <div key={idx} className="flex items-start gap-2">
+                            <div className="flex-1">
+                              <Input
+                                value={site}
+                                maxLength={MAX_URL_LENGTH}
+                                onChange={(e) => {
+                                  const v = e.target.value;
+                                  setWebsiteLinks(prev => prev.map((p, i) => i === idx ? v : p));
+                                  validateAtIndex(idx, v);
+                                }}
+                                placeholder={`Website ${idx + 1}`}
+                                className={websiteErrors[idx] ? 'border-red-500' : ''}
+                              />
+                              {websiteErrors[idx] && (
+                                <div className="text-xs text-red-600 mt-1">{websiteErrors[idx]}</div>
+                              )}
+                            </div>
+                            <div className="flex flex-col gap-1">
+                              <Button size="sm" variant="ghost" onClick={() => moveUp(idx)} title="Move up">
+                                <ChevronUp className="h-4 w-4" />
+                              </Button>
+                              <Button size="sm" variant="ghost" onClick={() => moveDown(idx)} title="Move down">
+                                <ChevronDown className="h-4 w-4" />
+                              </Button>
+                            </div>
+                            {/* Plus only on the latest input */}
+                            {idx === websiteLinks.length - 1 && (
+                              <Button size="sm" onClick={() => {
+                                if (websiteLinks.length >= MAX_WEBSITES) {
+                                  toast.error(`You can add up to ${MAX_WEBSITES} links only`);
+                                  return;
+                                }
+                                setWebsiteLinks(prev => [...prev, '']);
+                                setWebsiteErrors(prev => [...prev, '']);
+                              }}>
+                                <Plus className="h-4 w-4" />
+                              </Button>
+                            )}
+                            {/* Allow removing extra links (not the only input) */}
+                            {websiteLinks.length > 1 && (
+                              <Button size="sm" variant="outline" onClick={() => {
+                                setWebsiteLinks(prev => prev.filter((_, i) => i !== idx));
+                                setWebsiteErrors(prev => prev.filter((_, i) => i !== idx));
+                              }}>
+                                <X className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div>
+                        <Input
+                          id="website"
+                          value={profileData.website}
+                          maxLength={MAX_URL_LENGTH}
+                          onChange={(e) => {
+                            const v = e.target.value;
+                            setProfileData(prev => ({ ...prev, website: v }));
+                            setSingleWebsiteError(validateSingle(v));
+                          }}
+                          placeholder="Enter your website URL"
+                        />
+                        {singleWebsiteError && (
+                          <div className="text-xs text-red-600 mt-1">{singleWebsiteError}</div>
+                        )}
+                      </div>
+                    )
                   ) : (
-                    <p className="text-sm text-muted-foreground py-2">{profileData.website || "Not set"}</p>
+                    // Display priority: websites[0] if available, else profileData.website
+                    <p className="text-sm text-muted-foreground py-2">{(websiteLinks && websiteLinks[0]) || profileData.website || "Not set"}</p>
                   )}
                 </div>
               </div>
@@ -705,7 +1015,6 @@ const Settings = () => {
             </Card>
           </>
           )}
-
 
           {/* Professional Experience (Users only) */}
           {user.role !== 'company' && (
@@ -847,6 +1156,104 @@ const Settings = () => {
           </Card>
           )}
 
+               {/* Certifications: show only for verified, non-company users */}
+          {user.role !== 'company' && isVerifiedUser && (
+            <Card className="w-full p-6">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Award className="h-5 w-5" />
+                  Certifications
+                </CardTitle>
+                <CardDescription>
+                  Add certifications and verifications you want to display on your public profile
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {editing && (
+                  <div className="space-y-3 p-4 border rounded-lg">
+                    <Input
+                      value={newCertification.title}
+                      onChange={(e) => setNewCertification(prev => ({ ...prev, title: e.target.value }))}
+                      placeholder="Certification title (e.g. AWS Certified Solutions Architect)"
+                    />
+                    <Input
+                      value={newCertification.issuer}
+                      onChange={(e) => setNewCertification(prev => ({ ...prev, issuer: e.target.value }))}
+                      placeholder="Issuer (e.g. Amazon Web Services)"
+                    />
+                    <Input
+                      value={newCertification.date}
+                      onChange={(e) => setNewCertification(prev => ({ ...prev, date: e.target.value }))}
+                      placeholder="Date (e.g. 2023-05 or May 2023)"
+                    />
+                    <Input
+                      value={newCertification.credentialId}
+                      onChange={(e) => setNewCertification(prev => ({ ...prev, credentialId: e.target.value }))}
+                      placeholder="Credential ID (optional)"
+                    />
+                    <Input
+                      value={newCertification.credentialUrl}
+                      onChange={(e) => setNewCertification(prev => ({ ...prev, credentialUrl: e.target.value }))}
+                      placeholder="Credential URL (optional)"
+                    />
+                    {certUrlError && <div className="text-xs text-red-600">{certUrlError}</div>}
+                    <Textarea
+                      value={newCertification.description}
+                      onChange={(e) => setNewCertification(prev => ({ ...prev, description: e.target.value }))}
+                      placeholder="Description (optional)"
+                    />
+                    <Button onClick={addCertification} size="sm">
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Certification
+                    </Button>
+                  </div>
+                )}
+
+                <div className="space-y-4">
+                  {(profileData.certifications || []).map((c, index) => (
+                    <div key={index} className="p-3 border rounded-lg">
+                      {editingCertificationIndex === index ? (
+                        <div className="space-y-2">
+                          <Input value={editCertification?.title || ''} onChange={(e) => setEditCertification(prev => prev ? ({ ...prev, title: e.target.value }) : prev)} placeholder="Title" />
+                          <Input value={editCertification?.issuer || ''} onChange={(e) => setEditCertification(prev => prev ? ({ ...prev, issuer: e.target.value }) : prev)} placeholder="Issuer" />
+                          <Input value={editCertification?.date || ''} onChange={(e) => setEditCertification(prev => prev ? ({ ...prev, date: e.target.value }) : prev)} placeholder="Date (e.g. May 2023)" />
+                          <Input value={editCertification?.credentialId || ''} onChange={(e) => setEditCertification(prev => prev ? ({ ...prev, credentialId: e.target.value }) : prev)} placeholder="Credential ID (optional)" />
+                          <Input value={editCertification?.credentialUrl || ''} onChange={(e) => setEditCertification(prev => prev ? ({ ...prev, credentialUrl: e.target.value }) : prev)} placeholder="Credential URL (optional)" />
+                          {editCertUrlError && <div className="text-xs text-red-600">{editCertUrlError}</div>}
+                          <Textarea value={editCertification?.description || ''} onChange={(e) => setEditCertification(prev => prev ? ({ ...prev, description: e.target.value }) : prev)} placeholder="Description (optional)" />
+                          <div className="flex gap-2">
+                            <Button size="sm" onClick={() => saveEditedCertification(index)}>Save</Button>
+                            <Button size="sm" variant="outline" onClick={cancelEditCertification}>Cancel</Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex items-start gap-3">
+                            <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
+                              <Award className="h-5 w-5 text-yellow-600" />
+                            </div>
+                            <div>
+                              <div className="font-medium">{c.title}</div>
+                              <div className="text-sm text-muted-foreground">{c.issuer} • {c.date ? new Date(c.date).toLocaleString('en-US', { month: 'short', year: 'numeric' }) : ''}</div>
+                              {c.description && <div className="mt-1 text-sm">{c.description}</div>}
+                              {c.credentialUrl && (
+                                <a className="text-sm text-primary underline" href={c.credentialUrl} target="_blank" rel="noreferrer">View credential</a>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex flex-col gap-2">
+                            <Button size="sm" variant="ghost" onClick={() => startEditCertification(index)}>Edit</Button>
+                            <Button size="sm" variant="destructive" onClick={() => removeCertification(index)}>Remove</Button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+          
           {/* Company Profile (Companies only) */}
           {user.role === 'company' && (
           <Card className="w-full p-6">
@@ -1079,47 +1486,7 @@ const Settings = () => {
           </Card>
           )}
 
-                      {/* Wallet Connection */}
-            <Card className="w-full p-6">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Wallet className="h-5 w-5" />
-                  Connect Your Wallet
-                </CardTitle>
-                <CardDescription>
-                  Connect your wallet to apply for Web3 jobs and receive payments
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between p-4 border rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-gradient-to-r from-primary/20 to-primary-glow/20 rounded-lg flex items-center justify-center">
-                      <Wallet className="h-5 w-5 text-primary" />
-                    </div>
-                    <div>
-                      <p className="font-medium">MetaMask</p>
-                      <p className="text-sm text-muted-foreground">
-                        {profileData.walletAddress ? 
-                          `Connected: ${profileData.walletAddress.slice(0, 6)}...${profileData.walletAddress.slice(-4)}` : 
-                          'Connect your Web3 wallet'
-                        }
-                      </p>
-                    </div>
-                  </div>
-                  <Button 
-                    onClick={profileData.walletAddress ? disconnectWallet : connectWallet}
-                    variant={profileData.walletAddress ? "default" : "outline"}
-                  >
-                    {profileData.walletAddress ? (
-                      <>
-                        <LogOut className="h-4 w-4 mr-2" />
-                        Disconnect
-                      </>
-                    ) : 'Connect MetaMask'}
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+                      {/* Wallet Connection removed per request */}
 
           {/* Company Dashboard - Only show for company users */}
           {user.role === 'company' && (
@@ -1237,52 +1604,7 @@ const Settings = () => {
             </CardContent>
           </Card>
 
-                      {/* Account Status */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <User className="h-5 w-5" />
-                  Account Status
-                </CardTitle>
-                <CardDescription>
-                  Your current account information
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">Account Type</span>
-                  <Badge variant={user.role === 'company' ? 'default' : 'secondary'}>
-                    {user.role === 'company' ? 'Company' : 'Job Seeker'}
-                  </Badge>
-                </div>
-                
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">Email</span>
-                  <span className="text-sm text-muted-foreground">{user.email}</span>
-                </div>
-                
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">Member Since</span>
-                  <span className="text-sm text-muted-foreground">
-                    {user.createdAt ? new Date(user.createdAt).toLocaleDateString('en-US', { 
-                      year: 'numeric', 
-                      month: 'long', 
-                      day: 'numeric' 
-                    }) : 'N/A'}
-                  </span>
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">Wallet Address</span>
-                  <span className="text-sm text-muted-foreground">
-                    {profileData.walletAddress ? 
-                      `${profileData.walletAddress.slice(0, 6)}...${profileData.walletAddress.slice(-4)}` : 
-                      'Not connected'
-                    }
-                  </span>
-                </div>
-              </CardContent>
-            </Card>
+            {/* Account Status removed per request */}
         </div>
       </main>
     </div>

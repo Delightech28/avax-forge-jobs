@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { useNotification } from '@/context/NotificationContext';
 import Header from "@/components/Header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -45,7 +44,6 @@ const Notifications = () => {
   console.log('Notifications page user:', user);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
-  const { setUnreadCount } = useNotification();
 
   useEffect(() => {
   console.log('Notifications useEffect user:', user);
@@ -75,9 +73,15 @@ const Notifications = () => {
           } as Notification;
         });
         setNotifications(notificationsList);
-  // Update unread count immediately after fetching
-  const count = notificationsList.filter(n => !n.read).length;
-  setUnreadCount(count);
+        // Update unread count immediately after fetching
+        const count = notificationsList.filter(n => !n.read).length;
+        if (typeof window !== 'undefined') {
+          window.localStorage.setItem('unreadCount', String(count));
+          // Dispatch custom event so other windows/components can update immediately
+          try {
+            window.dispatchEvent(new CustomEvent('unreadCountUpdated', { detail: count }));
+          } catch {}
+        }
       } catch (e) {
         setNotifications([]);
       } finally {
@@ -85,7 +89,7 @@ const Notifications = () => {
       }
     };
     fetchNotifications();
-  }, [user, setUnreadCount]);
+  }, [user]);
 
   const [filter, setFilter] = useState(''); // No 'all' filter
   // Only unique categories, no 'all'
@@ -99,8 +103,13 @@ const Notifications = () => {
   // Persist unread count to localStorage for the header badge
   useEffect(() => {
     const count = notifications.filter(n => !n.read).length;
-    setUnreadCount(count);
-  }, [notifications, setUnreadCount]);
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem('unreadCount', String(count));
+      try {
+        window.dispatchEvent(new CustomEvent('unreadCountUpdated', { detail: count }));
+      } catch {}
+    }
+  }, [notifications]);
 
   // Basic unread reset when window gains focus
   useEffect(() => {
@@ -198,7 +207,6 @@ const Notifications = () => {
           } as Notification;
         });
         setNotifications(notificationsList);
-        setUnreadCount(notificationsList.filter(n => !n.read).length);
       }
     } catch (e) {
       // Optionally handle error
@@ -206,11 +214,9 @@ const Notifications = () => {
   };
 
   const markAllAsRead = () => {
-    setNotifications(prev => {
-      const updated = prev.map(notification => ({ ...notification, read: true }));
-      setUnreadCount(0);
-      return updated;
-    });
+    setNotifications(prev => 
+      prev.map(notification => ({ ...notification, read: true }))
+    );
   };
 
   // Removed delete per requirements

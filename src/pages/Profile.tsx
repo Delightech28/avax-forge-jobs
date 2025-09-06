@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { db } from '@/integrations/firebase/client';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, onSnapshot, collection, query, where, getDocs } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -62,19 +62,20 @@ const Profile = () => {
     companySize: '',
     visionCulture: '',
     contactEmail: '',
+  certifications: [] as Certification[],
   });
   const [subscribed, setSubscribed] = useState(false);
   const [expirationDate, setExpirationDate] = useState<string | null>(null);
+  const [applicationsCount, setApplicationsCount] = useState<number>(0);
   const [walletJustConnected, setWalletJustConnected] = useState(false);
   const [walletError, setWalletError] = useState<string | null>(null);
 
   // Always fetch walletAddress from Firestore on mount and when user changes
   useEffect(() => {
-    const fetchWalletAndSubscription = async () => {
-      if (user && user.id) {
-        const userRef = doc(db, 'users', user.id);
-        const userSnap = await getDoc(userRef);
-        if (userSnap.exists()) {
+    if (!user || !user.id) return;
+    const userRef = doc(db, 'users', user.id);
+    const unsub = onSnapshot(userRef, (userSnap) => {
+      if (userSnap.exists()) {
           const data = userSnap.data();
           setProfileData(prev => ({
             ...prev,
@@ -82,6 +83,8 @@ const Profile = () => {
             bio: data.bio || '',
             location: data.location || '',
             website: data.website || '',
+            // prefer websites array when present
+            websites: data.websites || (data.website ? [data.website] : []),
             skills: data.skills || [],
             experience: data.experience || [],
             education: data.education || [],
@@ -98,34 +101,56 @@ const Profile = () => {
             companySize: data.companySize || '',
             visionCulture: data.visionCulture || '',
             contactEmail: data.contactEmail || '',
+            certifications: data.certifications || [],
           }));
-          // Check for subscription plan and auto-verify
-          const plans = ['ProMonthly', 'ProAnnual', 'EliteMonthly', 'EliteAnnual'];
-          if (plans.includes(data.verified)) {
-            if (!subscribed) setSubscribed(true);
-            // Use subscriptionExpiration if available
-            if (data.subscriptionExpiration) {
-              setExpirationDate(new Date(data.subscriptionExpiration * 1000).toLocaleDateString());
-            } else if (data.expiration) {
-              setExpirationDate(new Date(data.expiration * 1000).toLocaleDateString());
-            } else {
-              setExpirationDate(null);
+
+          // Derive applications count from common user-doc fields used across codebases
+          const deriveApplicationsFromUserDoc = () => {
+            try {
+              // 1) applied_jobs (array)
+              if (Array.isArray(data.applied_jobs)) return data.applied_jobs.length || 0;
+              // 2) appliedJobs (camelCase)
+              if (Array.isArray(data.appliedJobs)) return data.appliedJobs.length || 0;
+              // 3) applied_jobs as an object/map where keys are jobIds
+              if (data.applied_jobs && typeof data.applied_jobs === 'object') return Object.keys(data.applied_jobs).length || 0;
+              // 4) explicit counts
+              if (typeof data.applied_jobs_count === 'number') return data.applied_jobs_count;
+              if (typeof data.appliedJobsCount === 'number') return data.appliedJobsCount;
+              // 5) generic applications array
+              if (Array.isArray(data.applications)) return data.applications.length || 0;
+              // fallback
+              return 0;
+            } catch (err) {
+              return 0;
             }
+          };
+          const derived = deriveApplicationsFromUserDoc();
+          setApplicationsCount(derived || 0);
+
+        // Check for subscription plan and auto-verify
+        const plans = ['ProMonthly', 'ProAnnual', 'EliteMonthly', 'EliteAnnual'];
+        if (plans.includes(data.verified)) {
+          if (!subscribed) setSubscribed(true);
+          if (data.subscriptionExpiration) {
+            setExpirationDate(new Date(data.subscriptionExpiration * 1000).toLocaleDateString());
+          } else if (data.expiration) {
+            setExpirationDate(new Date(data.expiration * 1000).toLocaleDateString());
           } else {
-            if (subscribed) setSubscribed(false);
             setExpirationDate(null);
           }
         } else {
-          // If no user doc, fallback to auth user fullName/email
-          setProfileData(prev => ({
-            ...prev,
-            fullName: user.fullName || user.email || prev.fullName
-          }));
+          if (subscribed) setSubscribed(false);
+          setExpirationDate(null);
         }
+      } else {
+        setProfileData(prev => ({ ...prev, fullName: user.fullName || user.email || prev.fullName }));
       }
-    };
-    fetchWalletAndSubscription();
-  }, [user, profileData.walletAddress, subscribed]);
+    });
+    return () => unsub();
+  }, [user, subscribed]);
+
+  // Note: applicationsCount is derived from the user document's applied_jobs array when present.
+  // If you prefer a separate 'applications' collection listener, we can re-enable that instead.
   
   type Experience = {
     title: string;
@@ -138,6 +163,14 @@ const Profile = () => {
     school: string;
     period: string;
     description: string;
+  };
+  type Certification = {
+    title: string;
+    issuer: string;
+    date: string;
+    credentialId?: string;
+    credentialUrl?: string;
+    description?: string;
   };
 
   // Subscription hook integration
@@ -313,7 +346,7 @@ const Profile = () => {
                 </div>
                 {user.role === 'company' ? (
                   <>
-                    <p className="text-lg text-muted-foreground mb-4 max-w-2xl">
+                    <p className="text-base text-muted-foreground mb-4 max-w-2xl">
                       {profileData.aboutCompany || 'No bio added yet. Update your profile in Settings to add a bio.'}
                     </p>
                     <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
@@ -343,18 +376,14 @@ const Profile = () => {
                         </span>
                       )}
                     </div>
-                    {(profileData.website || profileData.twitter || profileData.linkedin || profileData.discord) && (
+                    {((Array.isArray((profileData as unknown as Record<string, unknown>)['websites']) && (((profileData as unknown as Record<string, unknown>)['websites']) as string[]).length > 0) || profileData.twitter || profileData.linkedin || profileData.discord) && (
                       <div className="flex flex-wrap items-center gap-4 mt-2">
-                        {profileData.website && (
-                          <a 
-                            href={profileData.website.startsWith('http') ? profileData.website : `https://${profileData.website}`} 
-                            target="_blank" 
-                            rel="noreferrer" 
-                            className="hover:text-primary transition-colors"
-                          >
-                            {getWebsiteIcon(profileData.website)}
+                        {/* Render websites array if present */}
+                        {Array.isArray((profileData as unknown as Record<string, unknown>)['websites']) && (((profileData as unknown as Record<string, unknown>)['websites']) as string[]).map((w: string, i: number) => (
+                          <a key={i} href={w.startsWith('http') ? w : `https://${w}`} target="_blank" rel="noreferrer" className="hover:text-primary transition-colors">
+                            {getWebsiteIcon(w)}
                           </a>
-                        )}
+                        ))}
                         {profileData.twitter && (
                           <a href={profileData.twitter} target="_blank" rel="noreferrer" className="hover:text-primary transition-colors">
                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor" aria-label="X">
@@ -381,11 +410,11 @@ const Profile = () => {
                 ) : (
                   <>
                     {profileData.bio ? (
-                      <p className="text-lg text-muted-foreground mb-4 max-w-2xl">
+                      <p className="text-base text-muted-foreground mb-4 max-w-2xl">
                         {profileData.bio}
                       </p>
                     ) : (
-                      <p className="text-lg text-muted-foreground mb-4 max-w-2xl">
+                      <p className="text-base text-muted-foreground mb-4 max-w-2xl">
                         No bio added yet. Update your profile in Settings to add a bio.
                       </p>
                     )}
@@ -413,9 +442,16 @@ const Profile = () => {
                         })()}
                       </span>
                     </div>
-                    {(profileData.website || profileData.twitter || profileData.linkedin || profileData.discord) && (
+                    {((Array.isArray((profileData as unknown as Record<string, unknown>)['websites']) && (((profileData as unknown as Record<string, unknown>)['websites']) as string[]).length > 0) || profileData.website || profileData.twitter || profileData.linkedin || profileData.discord) && (
                       <div className="flex flex-wrap items-center gap-4 mt-2">
-                        {profileData.website && (
+                        {/* Render websites array if present */}
+                        {Array.isArray((profileData as unknown as Record<string, unknown>)['websites']) && (((profileData as unknown as Record<string, unknown>)['websites']) as string[]).map((w: string, i: number) => (
+                          <a key={i} href={w.startsWith('http') ? w : `https://${w}`} target="_blank" rel="noreferrer" className="hover:text-primary transition-colors">
+                            {getWebsiteIcon(w)}
+                          </a>
+                        ))}
+                        {/* Fallback to single website if no websites array */}
+                        {(!Array.isArray((profileData as unknown as Record<string, unknown>)['websites']) || (((profileData as unknown as Record<string, unknown>)['websites']) as string[]).length === 0) && profileData.website && (
                           <a 
                             href={profileData.website.startsWith('http') ? profileData.website : `https://${profileData.website}`} 
                             target="_blank" 
@@ -609,54 +645,50 @@ const Profile = () => {
                     )}
                   </CardContent>
                 </Card>
-                {/* Certifications card directly under Education */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Award className="h-5 w-5" />
-                      Certifications
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <p className="text-muted-foreground text-sm">No certifications added yet. Update your profile in Settings to add your certifications.</p>
-                  </CardContent>
-                </Card>
+                {/* Certifications card directly under Education - visible only to verified profiles */}
+                {subscribed && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Award className="h-5 w-5" />
+                        Certifications
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      {profileData.certifications && profileData.certifications.length > 0 ? (
+                        profileData.certifications.map((c, i) => (
+                          <div key={i} className="pb-3">
+                            <div className="flex items-start justify-between">
+                              <div className="flex items-start gap-3">
+                                <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
+                                  <Award className="h-5 w-5 text-yellow-600" />
+                                </div>
+                                <div>
+                                  <div className="font-semibold">{c.title}</div>
+                                  <div className="text-sm text-muted-foreground">{c.issuer} • {c.date ? new Date(c.date).toLocaleString('en-US', { month: 'short', year: 'numeric' }) : ''}</div>
+                                  {c.description && <div className="text-sm mt-1">{c.description}</div>}
+                                  {c.credentialUrl && (
+                                    <a className="text-sm text-primary underline inline-flex items-center gap-1" href={c.credentialUrl} target="_blank" rel="noreferrer">
+                                      View credential
+                                      <ExternalLink className="h-3 w-3" />
+                                    </a>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                            {i < (profileData.certifications.length - 1) && <Separator />}
+                          </div>
+                        ))
+                      ) : (
+                        <p className="text-muted-foreground text-sm">No certifications added yet. Update your profile in Settings to add your certifications.</p>
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
               </>
             )}
 
-            {user.role !== 'company' && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Briefcase className="h-5 w-5" />
-                    Professional Experience
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  {profileData.experience.length > 0 ? (
-                    profileData.experience.map((exp, index) => (
-                      <div key={index} className="space-y-2">
-                        <div className="flex items-start justify-between">
-                          <div>
-                            <h3 className="font-semibold text-lg">{exp.title}</h3>
-                            <p className="text-muted-foreground">{exp.company}</p>
-                          </div>
-                          <Badge variant="outline" className="text-xs">
-                            {exp.period}
-                          </Badge>
-                        </div>
-                        <p className="text-sm text-muted-foreground">{exp.description}</p>
-                        {index < profileData.experience.length - 1 && <Separator />}
-                      </div>
-                    ))
-                  ) : (
-                    <p className="text-muted-foreground text-sm">No experience added yet. Update your profile in Settings to add your work experience.</p>
-                  )}
-                </CardContent>
-              </Card>
-            )}
-
-          
+                     
           </div>
 
           {/* Sidebar */}
@@ -720,7 +752,7 @@ const Profile = () => {
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm">Applications</span>
-                    <span className="text-sm font-medium">12</span>
+                    <span className="text-sm font-medium">{applicationsCount}</span>
                   </div>
                 </CardContent>
               </Card>
@@ -817,7 +849,7 @@ const Profile = () => {
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-sm">Applications</span>
-                      <span className="text-sm font-medium">12</span>
+                      <span className="text-sm font-medium">{applicationsCount}</span>
                     </div>
                   </CardContent>
                 </Card>

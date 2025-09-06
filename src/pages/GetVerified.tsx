@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 
 const RED = "#ef4444"; // Tailwind red-500
 
+// User tiers (job seeker)
 const tiers = [
 	{
 		name: "Basic",
@@ -16,8 +17,7 @@ const tiers = [
 			"Access to community forums",
 		],
 		highlight: false,
-		cta
-		: "Current Plan",
+		cta: "Current Plan",
 		disabled: true,
 	},
 	{
@@ -48,6 +48,58 @@ const tiers = [
 			"Access to freelance gigs & remote-only premium jobs.",
 			"Top tier visibility in employer search results.",
 			"VIP Community forum access (Private group with experts & recruiters)",
+		],
+		highlight: false,
+		cta: "Upgrade to Elite",
+		disabled: false,
+	},
+];
+
+// Company tiers
+const companyTiers = [
+	{
+		name: "Basic",
+		price: "Free",
+		features: [
+			"Create a company profile & upload company logo.",
+			"Post 1 job per month (with Avax forge watermark as basic listing & $10 per post)",
+			"Access to applicant tracking (basic)",
+			"View up to 10 candidate profile per month",
+			"Limited analytics (views & applications count)",
+		],
+		highlight: false,
+		cta: "Current Plan",
+		disabled: true,
+	},
+	{
+		name: "Pro Plan ($10/month)",
+		price: "$10 / month",
+		features: [
+			"Everything in Basic, plus:",
+			"Post up to 5 jobs per month ($5 per post)",
+			"Featured job placement",
+			"Unlimited candidate profile views",
+			"AI-assisted job description optimization",
+			"Company branding on job post (no watermark)",
+			"Custom company dashboard with analytics",
+			"Access to candidate recommendations powered by AI.",
+		],
+		highlight: true,
+		cta: "Subscribe & Go Pro",
+		disabled: false,
+	},
+	{
+		name: "Elite Plan ($50/month)",
+		price: "$50 / month",
+		features: [
+			"Everything in Pro, plus:",
+			"Post up to 10 jobs per month ($3 per post)",
+			"Dedicated account manager (human support)",
+			"Priority visibility across the platform (top listing)",
+			"Access to premium candidate first (early access)",
+			"Advanced analytics & insights (conversion rates, best times to post)",
+			"Invite-only networking sessions with top talent & other companies",
+			"Employer branding boost (logo in featured section & newsletter)",
 		],
 		highlight: false,
 		cta: "Upgrade to Elite",
@@ -168,50 +220,35 @@ const GetVerified = () => {
 	};
 
 	// Pricing and CTA for each plan by billing period
-	const planData = {
+	const userPlanData = {
 		monthly: [
-			{
-				price: "Free",
-				cta: "Current Plan",
-			},
-			{
-				price: "$5 / month",
-				cta: currentPlan === "ProMonthly" ? "Current Plan" : "Subscribe & Go Pro",
-			},
-			{
-				price: "$25 / month",
-				cta:
-					currentPlan === "EliteMonthly" || currentPlan === "EliteAnnual"
-						? "Current Plan"
-						: currentPlan === "ProMonthly" || currentPlan === "ProAnnual"
-						? "Upgrade to Elite"
-						: "Subscribe to Elite",
-			},
+			{ price: "Free", cta: "Current Plan" },
+			{ price: "$5 / month", cta: currentPlan === "ProMonthly" ? "Current Plan" : "Subscribe & Go Pro" },
+			{ price: "$25 / month", cta: currentPlan === "EliteMonthly" || currentPlan === "EliteAnnual" ? "Current Plan" : currentPlan === "ProMonthly" || currentPlan === "ProAnnual" ? "Upgrade to Elite" : "Subscribe to Elite" },
 		],
 		annual: [
-			{
-				price: "Free",
-				cta: "Current Plan",
-			},
-			{
-				price: "$100 / year",
-				cta: currentPlan === "ProAnnual" ? "Current Plan" : "Subscribe & Go Pro",
-			},
-			{
-				price: "$250 / year",
-				cta:
-					currentPlan === "EliteMonthly" || currentPlan === "EliteAnnual"
-						? "Current Plan"
-						: currentPlan === "ProMonthly" || currentPlan === "ProAnnual"
-						? "Upgrade to Elite"
-						: "Subscribe to Elite",
-			},
+			{ price: "$60 / year", cta: "Current Plan" },
+			{ price: "$100 / year", cta: currentPlan === "ProAnnual" ? "Current Plan" : "Subscribe & Go Pro" },
+			{ price: "$250 / year", cta: currentPlan === "EliteMonthly" || currentPlan === "EliteAnnual" ? "Current Plan" : currentPlan === "ProMonthly" || currentPlan === "ProAnnual" ? "Upgrade to Elite" : "Subscribe to Elite" },
+		],
+	};
+
+	const companyPlanData = {
+		monthly: [
+			{ price: "Free", cta: "Current Plan" },
+			{ price: "$10 / month", cta: currentPlan === "ProMonthly" ? "Current Plan" : "Subscribe & Go Pro" },
+			{ price: "$50 / month", cta: currentPlan === "EliteMonthly" || currentPlan === "EliteAnnual" ? "Current Plan" : currentPlan === "ProMonthly" || currentPlan === "ProAnnual" ? "Upgrade to Elite" : "Subscribe to Elite" },
+		],
+		annual: [
+			{ price: "$120 / year", cta: "Current Plan" },
+			{ price: "$100 / year", cta: currentPlan === "ProAnnual" ? "Current Plan" : "Subscribe & Go Pro" },
+			{ price: "$500 / year", cta: currentPlan === "EliteMonthly" || currentPlan === "EliteAnnual" ? "Current Plan" : currentPlan === "ProMonthly" || currentPlan === "ProAnnual" ? "Upgrade to Elite" : "Subscribe to Elite" },
 		],
 	};
 
 	// Add subscription hook
 	const auth = getAuth();
-	const user = auth.currentUser;
+	const user = auth.currentUser as (typeof auth.currentUser & { role?: string }) | null;
 	const { subscribe, loading: subLoading, error: subError } = useSubscription(user?.uid, walletAddress || undefined);
 
 	// Helper to map modalPlanIdx and modalPeriod to PlanType
@@ -275,74 +312,80 @@ const GetVerified = () => {
 					</div>
 				</div>
 
-				<div className="w-full max-w-4xl overflow-x-auto mt-3 md:mt-0">
-					<div className="flex flex-nowrap gap-6 py-2" style={{ minHeight: 420 }}>
-						{tiers.map((tier, idx) => {
-							// Determine if this card is selected (on desktop)
-							const isSelected = selected === idx;
-							const isBasic = idx === 0;
-							const handleModalOpen = () => {
-								setModalPlanIdx(idx);
-								setModalPeriod(billingPeriod);
-								setShowModal(true);
-							};
-							return (
-								<div
-									key={tier.name}
-									tabIndex={0}
-									onClick={() => setSelected(idx)}
-									className={`flex-shrink-0 w-[300px] sm:w-[340px] md:w-auto bg-[#111827] rounded-2xl shadow-lg border-2 mt-10 flex flex-col p-6 relative pt-8 md:pt-6 ${
-										isBasic ? "cursor-default" : "cursor-pointer"
-									}
-                    transition-all duration-300
-                    ${tier.highlight && selected === null ? "border-red-500 scale-105" : ""}
-                    ${isSelected ? "md:border-red-500 md:scale-105" : "md:border-slate-700 md:scale-100"}
-                    ${!isSelected && !tier.highlight && selected !== null ? "md:border-slate-700 md:scale-100" : ""}
-                  `}
-									style={{ outline: "none" }}
-								>
-									{tier.highlight && (
-										<span className="absolute -top-4 left-1/2 -translate-x-1/2 bg-red-600 text-xs px-3 py-1 rounded-full font-semibold shadow text-white">
-											Most Popular
-										</span>
-									)}
-									<h2 className="text-xl font-bold mb-2 text-center">{tier.name}</h2>
-									<div className="text-3xl font-extrabold mb-2 text-center">
-										{planData[billingPeriod][idx].price}
-									</div>
-									<ul className="mb-6 space-y-2 text-sm text-slate-200">
-										{tier.features.map((f, i) => (
-											<li key={i} className="flex items-center gap-2">
-												<span className="inline-block w-2 h-2 rounded-full bg-red-500" />
-												{f}
-											</li>
-										))}
-									</ul>
-									{!isBasic && (
-										<button
-											className={`w-full py-2 rounded-lg font-semibold mt-auto transition-all duration-150 ${
-												tier.highlight
-													? "bg-red-600 hover:bg-red-700 text-white"
-													: "bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-600"
-											}`}
-											onClick={handleModalOpen}
+					<div className="w-full max-w-4xl overflow-x-auto mt-3 md:mt-0">
+						<div className="flex flex-nowrap gap-6 py-2" style={{ minHeight: 420 }}>
+							{(user?.role === 'company' ? companyTiers : tiers)
+								.filter((_, idx) => !(billingPeriod === 'annual' && idx === 0))
+								.map((tier, idx) => {
+									// For annual, idx offset by 1 (no Basic)
+									const realIdx = billingPeriod === 'annual' ? idx + 1 : idx;
+									const isSelected = selected === realIdx;
+									const isBasic = realIdx === 0 && billingPeriod !== 'annual';
+									const handleModalOpen = () => {
+										setModalPlanIdx(realIdx);
+										setModalPeriod(billingPeriod);
+										setShowModal(true);
+									};
+									// Use companyTiers and companyPlanData for company, tiers and userPlanData for user
+									const planDataToUse = user?.role === 'company' ? companyPlanData : userPlanData;
+									const tierList = user?.role === 'company' ? companyTiers : tiers;
+									return (
+										<div
+											key={tierList[realIdx].name}
+											tabIndex={0}
+											onClick={() => setSelected(realIdx)}
+											className={`flex-shrink-0 w-[300px] sm:w-[340px] md:w-auto bg-[#111827] rounded-2xl shadow-lg border-2 mt-10 flex flex-col p-6 relative pt-8 md:pt-6 ${
+												isBasic ? "cursor-default" : "cursor-pointer"
+											}
+											transition-all duration-300
+											${tierList[realIdx].highlight && selected === null ? "border-red-500 scale-105" : ""}
+											${isSelected ? "md:border-red-500 md:scale-105" : "md:border-slate-700 md:scale-100"}
+											${!isSelected && !tierList[realIdx].highlight && selected !== null ? "md:border-slate-700 md:scale-100" : ""}
+											`}
+											style={{ outline: "none" }}
 										>
-											{planData[billingPeriod][idx].cta}
-										</button>
-									)}
-									{isBasic && (
-										<button
-											className="w-full py-2 rounded-lg font-semibold mt-auto transition-all duration-150 bg-slate-800 text-slate-200 border border-slate-600 opacity-60 cursor-not-allowed"
-											disabled
-										>
-											{planData[billingPeriod][idx].cta}
-										</button>
-									)}
-								</div>
-							);
-						})}
+											{tierList[realIdx].highlight && (
+												<span className="absolute -top-4 left-1/2 -translate-x-1/2 bg-red-600 text-xs px-3 py-1 rounded-full font-semibold shadow text-white">
+													Most Popular
+												</span>
+											)}
+											<h2 className="text-xl font-bold mb-2 text-center">{tierList[realIdx].name}</h2>
+											<div className="text-3xl font-extrabold mb-2 text-center">
+												{planDataToUse[billingPeriod][realIdx].price}
+											</div>
+											<ul className="mb-6 space-y-2 text-sm text-slate-200">
+												{tierList[realIdx].features.map((f, i) => (
+													<li key={i} className="flex items-center gap-2">
+														<span className="inline-block w-2 h-2 rounded-full bg-red-500" />
+														{f}
+													</li>
+												))}
+											</ul>
+											{!isBasic && (
+												<button
+													className={`w-full py-2 rounded-lg font-semibold mt-auto transition-all duration-150 ${
+														tierList[realIdx].highlight
+															? "bg-red-600 hover:bg-red-700 text-white"
+															: "bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-600"
+													}`}
+													onClick={handleModalOpen}
+												>
+													{planDataToUse[billingPeriod][realIdx].cta}
+												</button>
+											)}
+											{isBasic && (
+												<button
+													className="w-full py-2 rounded-lg font-semibold mt-auto transition-all duration-150 bg-slate-800 text-slate-200 border border-slate-600 opacity-60 cursor-not-allowed"
+													disabled
+												>
+													{planDataToUse[billingPeriod][realIdx].cta}
+												</button>
+											)}
+										</div>
+									);
+								})}
+						</div>
 					</div>
-				</div>
 				{/* Modal for subscribe/upgrade - mobile slide up */}
 				{showModal && modalPlanIdx !== null && (
 					<div
@@ -361,63 +404,79 @@ const GetVerified = () => {
 								&times;
 							</button>
 							{/* Plan badge at top left */}
-							<div className="absolute top-4 left-4">
-								<span
-									className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide ${
-										modalPlanIdx === 1 ? "bg-red-600 text-white" : "bg-yellow-500 text-black"
-									}`}
-								>
-									{tiers[modalPlanIdx].name}
-								</span>
-							</div>
-							{/* Plan selection cards */}
-							<div className="flex flex-col gap-3 mt-6 mb-6">
-								{modalPeriod === "annual" && (
-									<div
-										className={`border rounded-xl p-4 flex flex-col gap-1 cursor-pointer transition-all border-red-500 bg-[#232b3b]`}
-									>
-										<div className="flex items-center justify-between">
-											<span className="font-semibold">Plan</span>
-											<span className="bg-green-600 text-xs px-2 py-0.5 rounded-full font-semibold text-white ml-2">
-												SAVE 15%
-											</span>
-										</div>
-										<div className="text-lg font-bold mt-1">
-											{planData.annual[modalPlanIdx].price.replace("/ year", "")}{" "}
-											<span className="text-xs font-normal text-slate-400">
-												/ year billed annually
-											</span>
-										</div>
-										<div className="text-xs text-slate-400">
-											{modalPlanIdx === 1
-												? "8.33"
-												: modalPlanIdx === 2
-												? "20.83"
-												: "0"}{" "}
-											/month
-										</div>
-									</div>
-								)}
-								{modalPeriod === "monthly" && (
-									<div
-										className={`border rounded-xl p-4 flex flex-col gap-1 cursor-pointer transition-all border-red-500 bg-[#232b3b]`}
-									>
-										<span className="font-semibold">Monthly plan</span>
-										<div className="text-lg font-bold mt-1">
-											{planData.monthly[modalPlanIdx].price.replace("/ month", "")}{" "}
-											<span className="text-xs font-normal text-slate-400">/ month</span>
-										</div>
-										<div className="text-xs text-slate-400">
-											{modalPlanIdx === 1
-												? "5"
-												: modalPlanIdx === 2
-												? "25"
-												: "0"}{" "}
-											/month billed monthly
-										</div>
-									</div>
-								)}
-							</div>
+											<div className="absolute top-4 left-4">
+												<span
+													className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide ${
+														modalPlanIdx === 1 ? "bg-red-600 text-white" : "bg-yellow-500 text-black"
+													}`}
+												>
+													{(user?.role === 'company' ? companyTiers : tiers)[modalPlanIdx].name}
+												</span>
+											</div>
+											{/* Plan selection cards */}
+											<div className="flex flex-col gap-3 mt-6 mb-6">
+												{modalPeriod === "annual" && (
+													<div
+														className={`border rounded-xl p-4 flex flex-col gap-1 cursor-pointer transition-all border-red-500 bg-[#232b3b]`}
+													>
+														<div className="flex items-center justify-between">
+															<span className="font-semibold">Plan</span>
+															<span className="bg-green-600 text-xs px-2 py-0.5 rounded-full font-semibold text-white ml-2">
+																SAVE 15%
+															</span>
+														</div>
+														<div className="text-lg font-bold mt-1">
+															{(user?.role === 'company' ? companyPlanData : userPlanData).annual[modalPlanIdx].price.replace("/ year", "")} {" "}
+															<span className="text-xs font-normal text-slate-400">
+																/ year billed annually
+															</span>
+														</div>
+														<div className="text-xs text-slate-400">
+															{modalPlanIdx === 1
+																? "8.33"
+																: modalPlanIdx === 2
+																? "20.83"
+																: "0"} {" "}
+															/month
+														</div>
+														<ul className="mt-2 mb-2 space-y-2 text-sm text-slate-200">
+															{(user?.role === 'company' ? companyTiers : tiers)[modalPlanIdx].features.map((f, i) => (
+																<li key={i} className="flex items-center gap-2">
+																	<span className="inline-block w-2 h-2 rounded-full bg-red-500" />
+																	{f}
+																</li>
+															))}
+														</ul>
+													</div>
+												)}
+												{modalPeriod === "monthly" && (
+													<div
+														className={`border rounded-xl p-4 flex flex-col gap-1 cursor-pointer transition-all border-red-500 bg-[#232b3b]`}
+													>
+														<span className="font-semibold">Monthly plan</span>
+														<div className="text-lg font-bold mt-1">
+															{(user?.role === 'company' ? companyPlanData : userPlanData).monthly[modalPlanIdx].price.replace("/ month", "")} {" "}
+															<span className="text-xs font-normal text-slate-400">/ month</span>
+														</div>
+														<div className="text-xs text-slate-400">
+															{modalPlanIdx === 1
+																? "5"
+																: modalPlanIdx === 2
+																? "25"
+																: "0"} {" "}
+															/month billed monthly
+														</div>
+														<ul className="mt-2 mb-2 space-y-2 text-sm text-slate-200">
+															{(user?.role === 'company' ? companyTiers : tiers)[modalPlanIdx].features.map((f, i) => (
+																<li key={i} className="flex items-center gap-2">
+																	<span className="inline-block w-2 h-2 rounded-full bg-red-500" />
+																	{f}
+																</li>
+															))}
+														</ul>
+													</div>
+												)}
+											</div>
 							{/* Wallet address logic and subscribe button */}
 							<div className="mb-4 text-center">
 								{loadingWallet && <span className="text-slate-400">Loading wallet...</span>}

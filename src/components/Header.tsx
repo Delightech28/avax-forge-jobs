@@ -4,6 +4,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 import { Bell, User, LogOut, MessageSquare } from "lucide-react";
 import { useEffect, useState } from "react";
+import { db } from '@/integrations/firebase/client';
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
 
 interface Profile {
   avatar_url?: string;
@@ -22,12 +24,67 @@ const Header = () => {
   const { user, signOut } = useAuth() as { user: User | null, signOut: () => void };
   const navigate = useNavigate();
   const [messageCount, setMessageCount] = useState(0);
+  const [unreadCount, setUnreadCount] = useState<number>(() => {
+    if (typeof window === 'undefined') return 0;
+    return parseInt(window.localStorage.getItem('unreadCount') || '0', 10) || 0;
+  });
 
   useEffect(() => {
     // Set mock unread message count for now
     if (user) {
       setMessageCount(3); // Mock data - replace with real Firestore query later
     }
+  }, [user]);
+
+  useEffect(() => {
+    // Listen for notifications updates via Firestore realtime listener, custom event, or storage events
+    const onUnreadUpdated = (e: Event) => {
+      try {
+        // CustomEvent detail
+        const ce = e as CustomEvent<number>;
+        if (ce && typeof ce.detail === 'number') {
+          setUnreadCount(ce.detail);
+          return;
+        }
+      } catch (err) {
+        console.warn('Header unreadCount event handler error', err);
+      }
+      // Fallback to reading localStorage
+      if (typeof window !== 'undefined') {
+        const v = parseInt(window.localStorage.getItem('unreadCount') || '0', 10) || 0;
+        setUnreadCount(v);
+      }
+    };
+
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === 'unreadCount') {
+        const v = parseInt(e.newValue || '0', 10) || 0;
+        setUnreadCount(v);
+      }
+    };
+    // Firestore realtime unread listener (updates badge across the app immediately)
+    let unsubFirestore: (() => void) | null = null;
+    if (user && user.email) {
+      try {
+        const q = query(collection(db, 'notifications'), where('userId', '==', user.email || user.email), where('read', '==', false));
+        unsubFirestore = onSnapshot(q, (snap) => {
+          setUnreadCount(snap.size || 0);
+        }, (err) => {
+          // ignore firestore errors here and fallback to localStorage/custom events
+          // console.error('Header notifications snapshot error', err);
+        });
+      } catch (err) {
+        // ignore and fallback
+      }
+    }
+
+    window.addEventListener('unreadCountUpdated', onUnreadUpdated as EventListener);
+    window.addEventListener('storage', onStorage);
+    return () => {
+      if (unsubFirestore) unsubFirestore();
+      window.removeEventListener('unreadCountUpdated', onUnreadUpdated as EventListener);
+      window.removeEventListener('storage', onStorage);
+    };
   }, [user]);
 
   const handleAuthAction = () => {
