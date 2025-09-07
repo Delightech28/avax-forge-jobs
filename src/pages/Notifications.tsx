@@ -80,7 +80,9 @@ const Notifications = () => {
           // Dispatch custom event so other windows/components can update immediately
           try {
             window.dispatchEvent(new CustomEvent('unreadCountUpdated', { detail: count }));
-          } catch {}
+          } catch {
+            // Intentionally suppress errors here
+          }
         }
       } catch (e) {
         setNotifications([]);
@@ -107,7 +109,9 @@ const Notifications = () => {
       window.localStorage.setItem('unreadCount', String(count));
       try {
         window.dispatchEvent(new CustomEvent('unreadCountUpdated', { detail: count }));
-      } catch {}
+      } catch {
+        // Intentionally suppress errors here
+      }
     }
   }, [notifications]);
 
@@ -383,70 +387,144 @@ const Notifications = () => {
 
         {/* Notification Settings */}
         <div className="mt-16">
-          <Card className="glass-card border-primary/20">
-            <CardHeader>
-              <CardTitle className="text-xl flex items-center gap-3">
-                <Settings className="h-5 w-5 text-primary" />
-                Notification Preferences
-              </CardTitle>
-              <CardDescription>
-                Customize how and when you receive notifications
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-4">
-                  <h4 className="font-semibold text-foreground">Email Notifications</h4>
-                  <div className="space-y-3">
-                    <label className="flex items-center gap-3 cursor-pointer">
-                      <input type="checkbox" checked={prefs.email.application} onChange={(e)=>setPrefs(p=>({...p,email:{...p.email,application:e.target.checked}}))} className="rounded border-primary/30 text-primary focus:ring-primary" />
-                      <span className="text-sm text-foreground/70">Job application updates</span>
-                    </label>
-                    <label className="flex items-center gap-3 cursor-pointer">
-                      <input type="checkbox" checked={prefs.email.matches} onChange={(e)=>setPrefs(p=>({...p,email:{...p.email,matches:e.target.checked}}))} className="rounded border-primary/30 text-primary focus:ring-primary" />
-                      <span className="text-sm text-foreground/70">New job matches</span>
-                    </label>
-                    <label className="flex items-center gap-3 cursor-pointer">
-                      <input type="checkbox" checked={prefs.email.updates} onChange={(e)=>setPrefs(p=>({...p,email:{...p.email,updates:e.target.checked}}))} className="rounded border-primary/30 text-primary focus:ring-primary" />
-                      <span className="text-sm text-foreground/70">Platform updates</span>
-                    </label>
-                    <label className="flex items-center gap-3 cursor-pointer">
-                      <input type="checkbox" checked={prefs.email.marketing} onChange={(e)=>setPrefs(p=>({...p,email:{...p.email,marketing:e.target.checked}}))} className="rounded border-primary/30 text-primary focus:ring-primary" />
-                      <span className="text-sm text-foreground/70">Marketing emails</span>
-                    </label>
-                  </div>
-                </div>
-                
-                <div className="space-y-4">
-                  <h4 className="font-semibold text-foreground">Push Notifications</h4>
-                  <div className="space-y-3">
-                    <label className="flex items-center gap-3 cursor-pointer">
-                      <input type="checkbox" checked={prefs.push.status} onChange={(e)=>setPrefs(p=>({...p,push:{...p.push,status:e.target.checked}}))} className="rounded border-primary/30 text-primary focus:ring-primary" />
-                      <span className="text-sm text-foreground/70">Application status changes</span>
-                    </label>
-                    <label className="flex items-center gap-3 cursor-pointer">
-                      <input type="checkbox" checked={prefs.push.messages} onChange={(e)=>setPrefs(p=>({...p,push:{...p.push,messages:e.target.checked}}))} className="rounded border-primary/30 text-primary focus:ring-primary" />
-                      <span className="text-sm text-foreground/70">New messages</span>
-                    </label>
-                    <label className="flex items-center gap-3 cursor-pointer">
-                      <input type="checkbox" checked={prefs.push.recommendations} onChange={(e)=>setPrefs(p=>({...p,push:{...p.push,recommendations:e.target.checked}}))} className="rounded border-primary/30 text-primary focus:ring-primary" />
-                      <span className="text-sm text-foreground/70">Job recommendations</span>
-                    </label>
-                    <label className="flex items-center gap-3 cursor-pointer">
-                      <input type="checkbox" checked={prefs.push.reminders} onChange={(e)=>setPrefs(p=>({...p,push:{...p.push,reminders:e.target.checked}}))} className="rounded border-primary/30 text-primary focus:ring-primary" />
-                      <span className="text-sm text-foreground/70">Reminders</span>
-                    </label>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="pt-4 border-t border-primary/20">
-                <Button onClick={savePreferences} className="bg-primary hover:bg-primary/90 transition-colors">
-                  Save Preferences
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+          {/* Helper: only show preferences to verified users */}
+          {
+            (() => {
+              const isVerifiedUser = (u: any) => {
+                if (!u) return false;
+                const verifiedPlans = ['ProMonthly', 'ProAnnual', 'EliteMonthly', 'EliteAnnual', 'Pro', 'Elite'];
+                // Various possible fields used across the app
+                if (u === true) return true;
+                if (typeof u === 'object') {
+                  if (u.isVerified === true || u.is_verified === true) return true;
+                  if (u.verified === true) return true;
+                  if (typeof u.verified === 'string' && verifiedPlans.includes(u.verified)) return true;
+                  if (typeof u.verifiedLevel === 'string' && verifiedPlans.includes(u.verifiedLevel)) return true;
+                  if (typeof u.verified_plan === 'string' && verifiedPlans.includes(u.verified_plan)) return true;
+                }
+                // Also check top-level user fields when an AuthUser is passed
+                if (typeof user !== 'undefined' && user) {
+                  const uu: any = user;
+                  if (uu.isVerified === true || uu.is_verified === true) return true;
+                  if (uu.verified === true) return true;
+                  if (typeof uu.verified === 'string' && verifiedPlans.includes(uu.verified)) return true;
+                }
+                return false;
+              };
+
+              if (!isVerifiedUser(user)) {
+                return (
+                  <Card className="glass-card border-primary/20">
+                    <CardHeader>
+                      <CardTitle className="text-lg flex items-center gap-3">
+                        <Settings className="h-5 w-5 text-primary" />
+                        Notification Preferences
+                      </CardTitle>
+                      <CardDescription>
+                        Notification settings are available to verified accounts only. Verify your account to customize how you receive notifications.
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-foreground/70">Once your account is verified you can customize email and push notification preferences here.</div>
+                    </CardContent>
+                  </Card>
+                );
+              }
+
+              // If user is verified, show the preferences. Companies get a reduced set.
+              const isCompany = user && (user as any).role === 'company';
+              return (
+                <Card className="glass-card border-primary/20">
+                  <CardHeader>
+                    <CardTitle className="text-xl flex items-center gap-3">
+                      <Settings className="h-5 w-5 text-primary" />
+                      Notification Preferences
+                    </CardTitle>
+                    <CardDescription>
+                      Customize how and when you receive notifications
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-4">
+                        <h4 className="font-semibold text-foreground">Email Notifications</h4>
+                        <div className="space-y-3">
+                          {isCompany ? (
+                            <>
+                              <label className="flex items-center gap-3 cursor-pointer">
+                                <input type="checkbox" checked={prefs.email.updates} onChange={(e)=>setPrefs(p=>({...p,email:{...p.email,updates:e.target.checked}}))} className="rounded border-primary/30 text-primary focus:ring-primary" />
+                                <span className="text-sm text-foreground/70">Platform updates</span>
+                              </label>
+                              <label className="flex items-center gap-3 cursor-pointer">
+                                <input type="checkbox" checked={prefs.email.marketing} onChange={(e)=>setPrefs(p=>({...p,email:{...p.email,marketing:e.target.checked}}))} className="rounded border-primary/30 text-primary focus:ring-primary" />
+                                <span className="text-sm text-foreground/70">Marketing emails</span>
+                              </label>
+                            </>
+                          ) : (
+                            <>
+                              <label className="flex items-center gap-3 cursor-pointer">
+                                <input type="checkbox" checked={prefs.email.application} onChange={(e)=>setPrefs(p=>({...p,email:{...p.email,application:e.target.checked}}))} className="rounded border-primary/30 text-primary focus:ring-primary" />
+                                <span className="text-sm text-foreground/70">Job application updates</span>
+                              </label>
+                              <label className="flex items-center gap-3 cursor-pointer">
+                                <input type="checkbox" checked={prefs.email.matches} onChange={(e)=>setPrefs(p=>({...p,email:{...p.email,matches:e.target.checked}}))} className="rounded border-primary/30 text-primary focus:ring-primary" />
+                                <span className="text-sm text-foreground/70">New job matches</span>
+                              </label>
+                              <label className="flex items-center gap-3 cursor-pointer">
+                                <input type="checkbox" checked={prefs.email.updates} onChange={(e)=>setPrefs(p=>({...p,email:{...p.email,updates:e.target.checked}}))} className="rounded border-primary/30 text-primary focus:ring-primary" />
+                                <span className="text-sm text-foreground/70">Platform updates</span>
+                              </label>
+                              <label className="flex items-center gap-3 cursor-pointer">
+                                <input type="checkbox" checked={prefs.email.marketing} onChange={(e)=>setPrefs(p=>({...p,email:{...p.email,marketing:e.target.checked}}))} className="rounded border-primary/30 text-primary focus:ring-primary" />
+                                <span className="text-sm text-foreground/70">Marketing emails</span>
+                              </label>
+                            </>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="space-y-4">
+                        <h4 className="font-semibold text-foreground">Push Notifications</h4>
+                        <div className="space-y-3">
+                          {isCompany ? (
+                            <label className="flex items-center gap-3 cursor-pointer">
+                              <input type="checkbox" checked={prefs.push.reminders} onChange={(e)=>setPrefs(p=>({...p,push:{...p.push,reminders:e.target.checked}}))} className="rounded border-primary/30 text-primary focus:ring-primary" />
+                              <span className="text-sm text-foreground/70">Reminders</span>
+                            </label>
+                          ) : (
+                            <>
+                              <label className="flex items-center gap-3 cursor-pointer">
+                                <input type="checkbox" checked={prefs.push.status} onChange={(e)=>setPrefs(p=>({...p,push:{...p.push,status:e.target.checked}}))} className="rounded border-primary/30 text-primary focus:ring-primary" />
+                                <span className="text-sm text-foreground/70">Application status changes</span>
+                              </label>
+                              <label className="flex items-center gap-3 cursor-pointer">
+                                <input type="checkbox" checked={prefs.push.messages} onChange={(e)=>setPrefs(p=>({...p,push:{...p.push,messages:e.target.checked}}))} className="rounded border-primary/30 text-primary focus:ring-primary" />
+                                <span className="text-sm text-foreground/70">New messages</span>
+                              </label>
+                              <label className="flex items-center gap-3 cursor-pointer">
+                                <input type="checkbox" checked={prefs.push.recommendations} onChange={(e)=>setPrefs(p=>({...p,push:{...p.push,recommendations:e.target.checked}}))} className="rounded border-primary/30 text-primary focus:ring-primary" />
+                                <span className="text-sm text-foreground/70">Job recommendations</span>
+                              </label>
+                              <label className="flex items-center gap-3 cursor-pointer">
+                                <input type="checkbox" checked={prefs.push.reminders} onChange={(e)=>setPrefs(p=>({...p,push:{...p.push,reminders:e.target.checked}}))} className="rounded border-primary/30 text-primary focus:ring-primary" />
+                                <span className="text-sm text-foreground/70">Reminders</span>
+                              </label>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="pt-4 border-t border-primary/20">
+                      <Button onClick={savePreferences} className="bg-primary hover:bg-primary/90 transition-colors">
+                        Save Preferences
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })()
+          }
         </div>
       </main>
     </div>

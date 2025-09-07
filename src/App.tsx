@@ -19,6 +19,7 @@ import Notifications from "./pages/Notifications";
 import Messages from "./pages/Messages";
 import GetVerified from "./pages/GetVerified";
 import Billing from "./pages/Billing";
+import CompanyProfile from "./pages/CompanyProfile";
 
 // Scroll to top on route change
 const ScrollToTop = () => {
@@ -53,6 +54,7 @@ function App() {
         <Route path="/contact" element={<Contact />} />
         <Route path="/notifications" element={<Notifications />} />
         <Route path="/messages" element={<Messages />} />
+  <Route path="/company/:id" element={<CompanyProfile />} />
   <Route path="/get-verified" element={<GetVerified />} />
   <Route path="/billing" element={<Billing />} />
       </Routes>

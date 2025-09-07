@@ -32,6 +32,8 @@ interface Job {
   created_at: string;
   expires_at?: string;
   company_name?: string;
+  company_id?: string;
+  companyId?: string;
   // companies: {
   //   id: string;
   //   name: string;
@@ -313,6 +315,7 @@ const Jobs = () => {
                   id: job.id,
                   title: job.title,
                   company: job.company_name || "",
+                  companyId: job.company_id || job.companyId || null,
                   location: job.location,
                   type: job.job_type.replace("_", " "),
                   salary: formatSalary(job.salary_min, job.salary_max, job.salary_currency),

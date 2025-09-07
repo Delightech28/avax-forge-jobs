@@ -16,6 +16,7 @@ import Header from "@/components/Header";
 import { db } from '@/integrations/firebase/client';
 import { collection, addDoc, doc as fsDoc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { useJobPayment } from "@/hooks/useJobPayment";
+import { filterSkills } from '@/lib/skills';
 
 
 
@@ -25,6 +26,7 @@ const PostJob = () => {
   const [submitting, setSubmitting] = useState(false);
   const [skills, setSkills] = useState<string[]>([]);
   const [newSkill, setNewSkill] = useState("");
+  const [skillSuggestions, setSkillSuggestions] = useState<string[]>([]);
 
   const [formData, setFormData] = useState({
   title: "",
@@ -74,6 +76,10 @@ const PostJob = () => {
       setNewSkill("");
     }
   };
+
+  useEffect(() => {
+    setSkillSuggestions(filterSkills(newSkill, 8));
+  }, [newSkill]);
 
   const removeSkill = (skillToRemove: string) => {
     setSkills(skills.filter(skill => skill !== skillToRemove));
@@ -411,6 +417,15 @@ const PostJob = () => {
                     Add
                   </Button>
                 </div>
+                {skillSuggestions.length > 0 && (
+                  <div className="mt-2 grid grid-cols-3 gap-2">
+                    {skillSuggestions.map(s => (
+                      <button key={s} type="button" onClick={() => { setNewSkill(''); if (!skills.includes(s)) setSkills(prev => [...prev, s]); }} className="text-sm px-2 py-1 rounded border hover:bg-blue-50 text-left">
+                        {s}
+                      </button>
+                    ))}
+                  </div>
+                )}
 
                 {skills.length > 0 && (
                   <div className="flex flex-wrap gap-2">

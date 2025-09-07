@@ -35,6 +35,7 @@ import {
 } from "lucide-react";
 // ...existing code...
 import { toast } from "sonner";
+import { SKILLS, filterSkills } from '@/lib/skills';
 import Header from "@/components/Header";
 
 
@@ -124,6 +125,7 @@ const Settings = () => {
     }
   };
   const [newSkill, setNewSkill] = useState("");
+  const [skillSuggestions, setSkillSuggestions] = useState<string[]>([]);
   const [newExperience, setNewExperience] = useState<Experience>({
     title: "",
     company: "",
@@ -153,6 +155,10 @@ const Settings = () => {
   const [websiteLinks, setWebsiteLinks] = useState<string[]>([]);
   const [websiteErrors, setWebsiteErrors] = useState<string[]>([]);
   const [singleWebsiteError, setSingleWebsiteError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setSkillSuggestions(filterSkills(newSkill, 8));
+  }, [newSkill]);
 
   const validateSingle = (raw: string): string | null => {
     if (!raw || !raw.trim()) return null;
@@ -994,6 +1000,20 @@ const Settings = () => {
                     <Button onClick={addSkill} size="sm">
                       <Plus className="h-4 w-4" />
                     </Button>
+                  </div>
+                )}
+                {editing && skillSuggestions.length > 0 && (
+                  <div className="mt-2 grid grid-cols-2 gap-2">
+                    {skillSuggestions.map((s) => (
+                      <button
+                        key={s}
+                        type="button"
+                        onClick={() => { setNewSkill(s); setProfileData(prev => ({ ...prev, skills: prev.skills.includes(s) ? prev.skills : [...prev.skills, s] })); }}
+                        className="text-sm px-2 py-1 rounded border hover:bg-primary/10 text-left"
+                      >
+                        {s}
+                      </button>
+                    ))}
                   </div>
                 )}
                 <div className="flex flex-wrap gap-2">

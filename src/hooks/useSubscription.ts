@@ -24,9 +24,41 @@ export function useSubscription(userId?: string, walletAddress?: string) {
     setError(null);
     try {
       if (!window.ethereum) throw new Error('No wallet found');
-      const provider = new ethers.BrowserProvider(window.ethereum);
-      await provider.send('eth_requestAccounts', []);
-      const signer = await provider.getSigner();
+
+      // Helper: request accounts and create provider/signer with one retry for transient MetaMask tracker errors
+      const requestAccountsAndGetSigner = async () => {
+        // First try MetaMask recommended request API
+        try {
+          await (window.ethereum as unknown as ethers.Eip1193Provider).request({ method: 'eth_requestAccounts' });
+        } catch (reqErr) {
+          // Some wallets or environments may still require provider.send; ignore and proceed to provider creation
+          console.debug('eth_requestAccounts request failed, will try provider.send fallback', reqErr);
+        }
+
+        // Create provider and signer
+        let provider = new ethers.BrowserProvider(window.ethereum as unknown as ethers.Eip1193Provider);
+        try {
+          const signer = await provider.getSigner();
+          return { provider, signer };
+        } catch (signerErr: unknown) {
+          const msg = String(
+            signerErr && typeof signerErr === 'object' && 'message' in signerErr
+              ? (signerErr as { message?: string }).message
+              : signerErr
+          );
+          // Known MetaMask transient errors: block tracker destroyed, circuit breaker
+          if (msg.includes('Block tracker destroyed') || msg.toLowerCase().includes('circuit breaker')) {
+            // retry once after short delay
+            await new Promise((r) => setTimeout(r, 300));
+            provider = new ethers.BrowserProvider(window.ethereum as unknown as ethers.Eip1193Provider);
+            const signer = await provider.getSigner();
+            return { provider, signer };
+          }
+          throw signerErr;
+        }
+      };
+
+      const { signer } = await requestAccountsAndGetSigner();
       const contract = getContract(signer);
       const planId = PLAN_ENUM[plan];
       const price = await contract.getPlanPrice(planId);
@@ -78,9 +110,34 @@ export function useSubscription(userId?: string, walletAddress?: string) {
     setError(null);
     try {
       if (!window.ethereum) throw new Error('No wallet found');
-      const provider = new ethers.BrowserProvider(window.ethereum);
-      await provider.send('eth_requestAccounts', []);
-      const signer = await provider.getSigner();
+      // reuse same helper used in subscribe
+      const requestAccountsAndGetSigner = async () => {
+        try {
+          await (window.ethereum as unknown as ethers.Eip1193Provider).request({ method: 'eth_requestAccounts' });
+        } catch (reqErr) {
+          console.debug('eth_requestAccounts request failed, will try provider.send fallback', reqErr);
+        }
+        let provider = new ethers.BrowserProvider(window.ethereum as unknown as ethers.Eip1193Provider);
+        try {
+          const signer = await provider.getSigner();
+          return { provider, signer };
+        } catch (signerErr: unknown) {
+          const msg = String(
+            signerErr && typeof signerErr === 'object' && 'message' in signerErr
+              ? (signerErr as { message?: string }).message
+              : signerErr
+          );
+          if (msg.includes('Block tracker destroyed') || msg.toLowerCase().includes('circuit breaker')) {
+            await new Promise((r) => setTimeout(r, 300));
+            provider = new ethers.BrowserProvider(window.ethereum as unknown as ethers.Eip1193Provider);
+            const signer = await provider.getSigner();
+            return { provider, signer };
+          }
+          throw signerErr;
+        }
+      };
+
+      const { signer } = await requestAccountsAndGetSigner();
       const contract = getContract(signer);
       const exp = await contract.getUserExpiration(walletAddress);
       setExpiration(Number(exp));
@@ -103,9 +160,33 @@ export function useSubscription(userId?: string, walletAddress?: string) {
     setError(null);
     try {
       if (!window.ethereum) throw new Error('No wallet found');
-      const provider = new ethers.BrowserProvider(window.ethereum);
-      await provider.send('eth_requestAccounts', []);
-      const signer = await provider.getSigner();
+      const requestAccountsAndGetSigner = async () => {
+        try {
+          await (window.ethereum as unknown as ethers.Eip1193Provider).request({ method: 'eth_requestAccounts' });
+        } catch (reqErr) {
+          console.debug('eth_requestAccounts request failed, will try provider.send fallback', reqErr);
+        }
+        let provider = new ethers.BrowserProvider(window.ethereum as unknown as ethers.Eip1193Provider);
+        try {
+          const signer = await provider.getSigner();
+          return { provider, signer };
+        } catch (signerErr: unknown) {
+          const msg = String(
+            signerErr && typeof signerErr === 'object' && 'message' in signerErr
+              ? (signerErr as { message?: string }).message
+              : signerErr
+          );
+          if (msg.includes('Block tracker destroyed') || msg.toLowerCase().includes('circuit breaker')) {
+            await new Promise((r) => setTimeout(r, 300));
+            provider = new ethers.BrowserProvider(window.ethereum as unknown as ethers.Eip1193Provider);
+            const signer = await provider.getSigner();
+            return { provider, signer };
+          }
+          throw signerErr;
+        }
+      };
+
+      const { signer } = await requestAccountsAndGetSigner();
       const contract = getContract(signer);
       const planId = PLAN_ENUM[plan];
       const price = await contract.getPlanPrice(planId);
@@ -120,7 +201,7 @@ export function useSubscription(userId?: string, walletAddress?: string) {
     } finally {
       setLoading(false);
     }
-  }, [walletAddress]);
+  }, []);
 
   return {
     loading,

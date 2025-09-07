@@ -1,13 +1,18 @@
+import React, { useEffect, useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { MapPin, Clock, DollarSign, Shield, Building } from "lucide-react";
+import { Link } from "react-router-dom";
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '@/integrations/firebase/client';
 
 interface JobCardProps {
   job: {
     id: string;
     title: string;
-    company: string;
+  company: string;
+  companyId?: string | null;
     location: string;
     type: string;
     salary: string;
@@ -20,17 +25,109 @@ interface JobCardProps {
   isFeatured?: boolean;
 }
 
+// Simple in-memory cache for company verification status to avoid repeated reads
+const companyVerificationCache: Record<string, boolean> = {};
+
 const JobCard = ({ job, isFeatured = false }: JobCardProps) => {
+  const [companyVerified, setCompanyVerified] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+    const companyId = job.companyId;
+    if (!companyId) {
+      setCompanyVerified(null);
+      return;
+    }
+
+    // If cached, use it
+    if (companyVerificationCache[companyId] !== undefined) {
+      setCompanyVerified(companyVerificationCache[companyId]);
+      return;
+    }
+
+    type CompanyLike = {
+      isVerified?: boolean;
+      is_verified?: boolean;
+      verified?: boolean | string;
+      verifiedLevel?: string;
+      verified_plan?: string;
+      [key: string]: unknown;
+    };
+    (async () => {
+      try {
+        const compRef = doc(db, 'companies', companyId);
+        const snap = await getDoc(compRef);
+        let verified = false;
+        const verifiedPlans = ['ProMonthly', 'ProAnnual', 'EliteMonthly', 'EliteAnnual'];
+        if (snap.exists()) {
+          const data = snap.data() as CompanyLike;
+          verified = !!(
+            data.isVerified ||
+            data.is_verified ||
+            data.verified === true ||
+            (typeof data.verified === 'string' && verifiedPlans.includes(data.verified)) ||
+            (typeof data.verifiedLevel === 'string' && verifiedPlans.includes(data.verifiedLevel)) ||
+            (typeof data.verified_plan === 'string' && verifiedPlans.includes(data.verified_plan))
+          );
+        }
+
+        // If not verified from companies collection, also try users collection (some apps store company profile under users)
+        if (!verified) {
+          try {
+            const userRef = doc(db, 'users', companyId);
+            const uSnap = await getDoc(userRef);
+            if (uSnap.exists()) {
+              const udata = uSnap.data() as CompanyLike;
+              verified = !!(
+                udata.verified === true ||
+                udata.isVerified ||
+                udata.is_verified ||
+                (typeof udata.verified === 'string' && verifiedPlans.includes(udata.verified)) ||
+                (typeof udata.verifiedLevel === 'string' && verifiedPlans.includes(udata.verifiedLevel)) ||
+                (typeof udata.verified_plan === 'string' && verifiedPlans.includes(udata.verified_plan))
+              );
+            }
+          } catch (err) {
+            // ignore user lookup errors
+          }
+        }
+        companyVerificationCache[companyId] = verified;
+        if (mounted) setCompanyVerified(verified);
+      } catch (err) {
+        // don't show verified on error
+        companyVerificationCache[companyId] = false;
+        if (mounted) setCompanyVerified(false);
+      }
+    })();
+
+    return () => { mounted = false; };
+  }, [job.companyId]);
+  // Debug info to help trace why badges appear
+  useEffect(() => {
+  console.debug('[JobCard] companyId:', job.companyId, 'job.isVerified:', job.isVerified, 'companyVerified:', companyVerified);
+  }, [job.companyId, job.isVerified, companyVerified]);
   return (
     <Card className="group hover:shadow-xl transition-all duration-300 hover:-translate-y-1 glass-card border-border/50">
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
           <div className="flex items-center space-x-3">
             <div className="w-12 h-12 bg-gradient-to-r from-primary/20 to-primary-glow/20 rounded-lg flex items-center justify-center overflow-hidden">
-              {job.logo_url ? (
-                <img src={job.logo_url} alt={job.company} className="w-full h-full object-cover rounded-lg" />
+              {job.companyId ? (
+                <Link to={`/company/${job.companyId}`} className="block w-full h-full">
+                  {job.logo_url ? (
+                    <img src={job.logo_url} alt={job.company} className="w-full h-full object-cover rounded-lg" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <Building className="h-6 w-6 text-primary" />
+                    </div>
+                  )}
+                </Link>
               ) : (
-                <Building className="h-6 w-6 text-primary" />
+                job.logo_url ? (
+                  <img src={job.logo_url} alt={job.company} className="w-full h-full object-cover rounded-lg" />
+                ) : (
+                  <Building className="h-6 w-6 text-primary" />
+                )
               )}
             </div>
             <div>
@@ -39,8 +136,13 @@ const JobCard = ({ job, isFeatured = false }: JobCardProps) => {
               </h3>
               <div className="flex items-center gap-2">
                 <span className="text-muted-foreground text-sm">Posted by</span>
-                <span className="text-foreground/70 text-sm font-medium">{job.company}</span>
-                {job.isVerified && (
+                <Link
+                  to={`/company/${job.companyId ? job.companyId : encodeURIComponent(job.company)}`}
+                  className="text-foreground/70 text-sm font-medium hover:text-primary"
+                >
+                  {job.company}
+                </Link>
+                {(companyVerified === true) && (
                   <span className="flex items-center gap-1">
                     <Shield className="h-4 w-4 text-primary" />
                     <span className="text-xs text-primary">Verified</span>
