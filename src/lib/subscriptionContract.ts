@@ -1,3 +1,40 @@
+// Helper to ensure user is on Avalanche Fuji network
+export async function ensureFujiNetwork() {
+	const fujiChainId = '0xa869';
+	const fujiParams = {
+		chainId: fujiChainId,
+		chainName: 'Avalanche Fuji C-Chain',
+		nativeCurrency: { name: 'Avalanche', symbol: 'AVAX', decimals: 18 },
+		rpcUrls: ['https://api.avax-test.network/ext/bc/C/rpc'],
+		blockExplorerUrls: ['https://testnet.snowtrace.io/'],
+	};
+	if (!window.ethereum) throw new Error('No wallet found');
+	const currentChainId = await window.ethereum.request({ method: 'eth_chainId' });
+	if (currentChainId !== fujiChainId) {
+		try {
+			await window.ethereum.request({
+				method: 'wallet_switchEthereumChain',
+				params: [{ chainId: fujiChainId }],
+			});
+		} catch (switchError) {
+			// If the chain is not added, add it
+			if (
+				switchError &&
+				typeof switchError === 'object' &&
+				'code' in switchError &&
+				typeof (switchError as { code?: unknown }).code === 'number' &&
+				(switchError as { code: number }).code === 4902
+			) {
+				await window.ethereum.request({
+					method: 'wallet_addEthereumChain',
+					params: [fujiParams],
+				});
+			} else {
+				throw switchError;
+			}
+		}
+	}
+}
 import { ethers } from 'ethers';
 
 export const CONTRACT_ADDRESS = '0x36c84ef0430e3d4da307d4ce101578508bf136a9';

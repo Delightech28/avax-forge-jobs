@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { toast } from 'sonner';
 import { ethers } from 'ethers';
-import { getContract } from '@/lib/subscriptionContract';
+import { getContract, ensureFujiNetwork } from '@/lib/subscriptionContract';
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '@/integrations/firebase/client';
 
@@ -24,9 +24,12 @@ export function useSubscription(userId?: string, walletAddress?: string) {
     setLoading(true);
     setError(null);
     try {
-  // Detect Android device
-  const isAndroid = typeof navigator !== 'undefined' && /android/i.test(navigator.userAgent);
+      // Detect Android device
+      const isAndroid = typeof navigator !== 'undefined' && /android/i.test(navigator.userAgent);
       if (!window.ethereum) throw new Error('No wallet found');
+
+      // Ensure user is on Fuji before contract calls
+      await ensureFujiNetwork();
 
       // Helper: request accounts and create provider/signer with one retry for transient MetaMask tracker errors
       const requestAccountsAndGetSigner = async () => {
