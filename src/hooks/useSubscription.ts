@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { toast } from 'sonner';
 import { ethers } from 'ethers';
 import { getContract } from '@/lib/subscriptionContract';
 import { doc, updateDoc } from 'firebase/firestore';
@@ -23,6 +24,8 @@ export function useSubscription(userId?: string, walletAddress?: string) {
     setLoading(true);
     setError(null);
     try {
+  // Detect Android device
+  const isAndroid = typeof navigator !== 'undefined' && /android/i.test(navigator.userAgent);
       if (!window.ethereum) throw new Error('No wallet found');
 
       // Helper: request accounts and create provider/signer with one retry for transient MetaMask tracker errors
@@ -97,7 +100,16 @@ export function useSubscription(userId?: string, walletAddress?: string) {
       if (typeof err === 'object' && err !== null && 'message' in err) {
         msg = (err as { message?: string }).message || msg;
       }
+      // Log error and device info for debugging
+      console.error('[Subscription Error]', msg, { err, userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : '' });
       setError(msg);
+      // Show Android-specific warning if on Android
+      const isAndroid = typeof navigator !== 'undefined' && /android/i.test(navigator.userAgent);
+      if (isAndroid) {
+        toast.error('Subscription failed on Android. Please use MetaMask Mobile browser or try on desktop.');
+      } else {
+        toast.error(msg);
+      }
       return false;
     } finally {
       setLoading(false);
