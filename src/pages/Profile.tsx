@@ -704,8 +704,12 @@ const Profile = () => {
                     <Button asChild className="w-full">
                       <a href="/manage-jobs">Manage Jobs</a>
                     </Button>
-                    <Button asChild variant="outline" className="w-full">
-                      <a href="/jobs">View Applicants</a>
+                    <Button
+                      variant="outline"
+                      className="w-full"
+                      onClick={() => navigate('/view-applicants')}
+                    >
+                      View Applicants
                     </Button>
                     <Button asChild variant="outline" className="w-full">
                       <a href="/billing">Billing & Verification</a>

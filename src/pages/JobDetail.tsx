@@ -41,6 +41,7 @@ interface JobDetail {
     size_range: string;
     industry: string;
   };
+  companyId?: string;
 }
 
 const JobDetail = () => {
@@ -107,8 +108,8 @@ const JobDetail = () => {
         skills: j.skills || [],
         requirements: j.requirements || '',
         benefits: j.benefits || '',
-  // ...removed token compensation...
-  // ...removed token amount...
+        // ...removed token compensation...
+        // ...removed token amount...
         requires_wallet: j.requires_wallet,
         created_at: j.created_at,
         expires_at: j.expires_at,
@@ -122,6 +123,7 @@ const JobDetail = () => {
           size_range: "",
           industry: ""
         },
+        companyId: j.companyId || ""
       });
     } catch (error) {
       console.error("Error fetching job:", error);
@@ -172,21 +174,33 @@ const JobDetail = () => {
         appliedAt: new Date().toISOString(),
       });
       setHasApplied(true);
-      // Send notification to company
-      if (job.companies?.id) {
+      // Send notification to company (try companyId, then companies.id)
+      let companyId = job.companyId;
+      if (!companyId && job.companies?.id) companyId = job.companies.id;
+      console.log('[Job Application] Attempting to notify company:', companyId);
+      if (!companyId) {
+        console.warn('[Job Application] No companyId found in job object:', job);
+      }
+      if (companyId) {
         try {
           const { addDoc, collection, serverTimestamp } = await import('firebase/firestore');
-          await addDoc(collection(db, 'notifications'), {
-            userId: job.companies.id,
+          const notification = {
+            userId: companyId,
             type: 'application',
             category: 'application',
             title: 'New Job Application',
-            message: `${user.fullName || user.email || 'A user'} has applied for your job: ${job.title}`,
-            timestamp: new Date().toLocaleDateString(),
+            message:
+              `${user.fullName ? user.fullName : user.email ? user.email : 'A user'} ` +
+              `applied for your job "${job.title}".`,
+            jobId: job.id,
+            applicantId: user.id,
+            timestamp: new Date().toLocaleString(),
             createdAt: serverTimestamp(),
             read: false,
-          });
-          console.log('Notification created for company:', job.companies.id);
+          };
+          console.log('[Job Application] Notification object:', notification);
+          await addDoc(collection(db, 'notifications'), notification);
+          console.log('[Job Application] Notification created for company:', companyId);
         } catch (notifError) {
           console.error('Failed to create notification:', notifError);
         }

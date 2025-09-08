@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { Wallet, User, Mail, Lock, UserPlus, Briefcase } from 'lucide-react';
+import { getAuth, sendPasswordResetEmail } from 'firebase/auth';
 
 const Auth = () => {
   const [isSignUp, setIsSignUp] = useState(false);
@@ -31,6 +32,12 @@ const Auth = () => {
   const navigate = useNavigate();
   const [isConnecting, setIsConnecting] = useState(false);
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
+
+  // Password reset modal state
+  const [showResetModal, setShowResetModal] = useState(false);
+  const [resetEmail, setResetEmail] = useState('');
+  const [resetSubmitting, setResetSubmitting] = useState(false);
+  const [resetMessage, setResetMessage] = useState('');
 
   useEffect(() => {
     console.log('Auth useEffect - user:', user, 'loading:', loading);
@@ -99,12 +106,12 @@ const Auth = () => {
       setErrorMessage(''); // Clear previous errors
       setIsConnecting(true);
       
-      if (!(window as any).ethereum) {
+      // Fix window as any
+      if (!(window as Window & { ethereum?: unknown }).ethereum) {
         setErrorMessage('MetaMask not found. Please install MetaMask extension.');
         return;
       }
-      
-      const provider = (window as any).ethereum;
+      const provider = (window as Window & { ethereum: { request: (args: { method: string }) => Promise<string[]> } }).ethereum;
       const accounts = await provider.request({ method: 'eth_requestAccounts' });
       const address = accounts[0];
       
@@ -112,18 +119,45 @@ const Auth = () => {
         setWalletAddress(address);
         const authResult = await signInWithWallet(address);
         if (authResult.error) {
-          setErrorMessage(authResult.error.message || 'Failed to authenticate with wallet');
+          const errorMessageText =
+            typeof authResult.error === 'object' &&
+            authResult.error !== null &&
+            'message' in authResult.error
+              ? (authResult.error as { message?: string }).message
+              : undefined;
+          setErrorMessage(errorMessageText || 'Failed to authenticate with wallet');
         }
         // Navigation will happen automatically via useEffect when user state changes
       }
-    } catch (error: any) {
-      if (error.code === 4001) {
+    } catch (error) {
+      // Fix error: any in wallet connect
+      if (typeof error === 'object' && error !== null && 'code' in error && (error as { code?: unknown }).code === 4001) {
         setErrorMessage('Wallet connection was rejected');
       } else {
         setErrorMessage('Failed to connect wallet. Please try again.');
       }
     } finally {
       setIsConnecting(false);
+    }
+  };
+
+  const handlePasswordReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setResetSubmitting(true);
+    setResetMessage('');
+    try {
+      const auth = getAuth();
+      await sendPasswordResetEmail(auth, resetEmail);
+      setResetMessage('Password reset email sent! Check your inbox.');
+    } catch (err) {
+      // Fix error: any in password reset
+      if (typeof err === 'object' && err !== null && 'message' in err) {
+        setResetMessage((err as { message?: string }).message || 'Failed to send reset email');
+      } else {
+        setResetMessage('Failed to send reset email');
+      }
+    } finally {
+      setResetSubmitting(false);
     }
   };
 
@@ -348,7 +382,18 @@ const Auth = () => {
                   )}
                 </div>
                 
-                                 <Button
+                <div className="flex justify-end mb-4">
+                  <button
+                    type="button"
+                    className="text-xs text-primary hover:underline"
+                    onClick={() => setShowResetModal(true)}
+                    style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
+                  >
+                    Forgot password?
+                  </button>
+                </div>
+                
+                <Button
                    type="submit"
                    className="w-full"
                    disabled={submitting}
@@ -405,6 +450,36 @@ const Auth = () => {
           </div>
         </CardFooter>
       </Card>
+      
+      {/* Password reset modal (simple inline modal) */}
+      {showResetModal && (
+        <div className="fixed inset-0 bg-black flex items-center justify-center z-50">
+          <div className="bg-black rounded-lg p-6 w-full max-w-sm shadow-lg relative border border-white/10">
+            <button
+              className="absolute top-2 right-2 text-gray-400 hover:text-gray-200"
+              onClick={() => { setShowResetModal(false); setResetEmail(''); setResetMessage(''); }}
+              aria-label="Close"
+            >
+              &times;
+            </button>
+            <h2 className="text-lg font-semibold mb-2 text-center text-white">Reset Password</h2>
+            <form onSubmit={handlePasswordReset} className="space-y-3">
+              <Label htmlFor="resetEmail" className="text-white">Email</Label>
+              <Input
+                id="resetEmail"
+                type="email"
+                value={resetEmail}
+                onChange={e => setResetEmail(e.target.value)}
+                required
+              />
+              <Button type="submit" disabled={resetSubmitting} className="w-full">
+                {resetSubmitting ? 'Sending...' : 'Send Reset Email'}
+              </Button>
+            </form>
+            {resetMessage && <div className="mt-3 text-sm text-center text-primary">{resetMessage}</div>}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

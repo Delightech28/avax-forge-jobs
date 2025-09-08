@@ -432,7 +432,8 @@ const Notifications = () => {
               }
 
               // If user is verified, show the preferences. Companies get a reduced set.
-              const isCompany = user && (user as any).role === 'company';
+              type UserWithRole = { role?: string };
+              const isCompany = user && (user as UserWithRole).role === 'company';
               return (
                 <Card className="glass-card border-primary/20">
                   <CardHeader>
