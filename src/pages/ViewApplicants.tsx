@@ -135,7 +135,7 @@ const ViewApplicants = () => {
                       <div>
                         <div className="font-semibold">{app.fullName || app.email || 'Unknown'}</div>
                         <div className="text-sm text-muted-foreground">{app.email}</div>
-                        <div className="text-xs">Wallet: {app.walletAddress}</div>
+                        {/* Wallet address removed for privacy */}
                       </div>
                     </div>
                   ))}

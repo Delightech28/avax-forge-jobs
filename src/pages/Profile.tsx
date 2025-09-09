@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { db } from '@/integrations/firebase/client';
-import { doc, getDoc, onSnapshot, collection, query, where, getDocs } from 'firebase/firestore';
+import { doc, getDoc, onSnapshot, collection, query, where, getDocs, updateDoc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -45,7 +45,6 @@ const Profile = () => {
     fullName: '',
     bio: '',
     location: '',
-    website: '',
     skills: [] as string[],
     experience: [] as Experience[],
     education: [] as Education[],
@@ -62,8 +61,39 @@ const Profile = () => {
     companySize: '',
     visionCulture: '',
     contactEmail: '',
-  certifications: [] as Certification[],
+    createdAt: null as string | null,
+    certifications: [] as Certification[],
+    website: '', // Add website property
   });
+  // For avatar upload
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+
+  // Helper: Convert file to base64 string
+  const fileToBase64 = (file: File): Promise<string> =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+
+  // Handle avatar upload
+  const handleProfileImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user?.id) return;
+    setUploadingAvatar(true);
+    try {
+      const base64 = await fileToBase64(file);
+      const userRef = doc(db, 'users', user.id);
+      await updateDoc(userRef, { avatar: base64 });
+      setProfileData(prev => ({ ...prev, avatar: base64 }));
+    } catch (err) {
+      // Optionally handle error
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
   const [subscribed, setSubscribed] = useState(false);
   const [expirationDate, setExpirationDate] = useState<string | null>(null);
   const [applicationsCount, setApplicationsCount] = useState<number>(0);
@@ -102,6 +132,7 @@ const Profile = () => {
             visionCulture: data.visionCulture || '',
             contactEmail: data.contactEmail || '',
             certifications: data.certifications || [],
+            createdAt: data.createdAt || user.createdAt || null,
           }));
 
           // Derive applications count from common user-doc fields used across codebases
@@ -273,14 +304,16 @@ const Profile = () => {
         <Card className="mb-6">
           <CardContent className="pt-6">
             <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
-              <Avatar className="w-24 h-24">
-                <AvatarImage src={profileData.avatar} />
-                <AvatarFallback className="text-2xl">
-                  {user.role === 'company'
-                    ? (profileData.companyName?.charAt(0) || 'C')
-                    : (profileData.fullName?.charAt(0) || user.fullName?.charAt(0) || user.email?.charAt(0) || 'A')}
-                </AvatarFallback>
-              </Avatar>
+              <div className="relative group">
+                <Avatar className="w-24 h-24">
+                  <AvatarImage src={profileData.avatar} />
+                  <AvatarFallback className="text-2xl">
+                    {user.role === 'company'
+                      ? (profileData.companyName?.charAt(0) || 'C')
+                      : (profileData.fullName?.charAt(0) || user.fullName?.charAt(0) || user.email?.charAt(0) || 'A')}
+                  </AvatarFallback>
+                </Avatar>
+              </div>
               <div className="flex-1">
                 <div className="flex items-center gap-3 mb-2">
                   <h1 className="text-3xl font-bold flex items-center gap-2">
@@ -359,9 +392,8 @@ const Profile = () => {
                       <span className="flex items-center gap-2">
                         <Calendar className="h-4 w-4" />
                         Member Since {(() => {
-                          let date = null;
-                          if (user.createdAt) {
-                            date = new Date(user.createdAt);
+                          if (profileData.createdAt) {
+                            const date = new Date(profileData.createdAt);
                             if (!isNaN(date.getTime())) {
                               return date.toLocaleString('en-US', { month: 'long', year: 'numeric' });
                             }
@@ -432,10 +464,10 @@ const Profile = () => {
                       <span className="flex items-center gap-2">
                         <Calendar className="h-4 w-4" />
                         Member Since {(() => {
-                          if (user.createdAt) {
-                            const date = new Date(user.createdAt);
+                          if (profileData.createdAt) {
+                            const date = new Date(profileData.createdAt);
                             if (!isNaN(date.getTime())) {
-                              return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+                              return date.toLocaleString('en-US', { month: 'long', year: 'numeric' });
                             }
                           }
                           return 'Recently';

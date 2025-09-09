@@ -72,21 +72,6 @@ const JobDetail = () => {
     checkSaved();
   }, [user, job?.id]);
 
-  // Check if user has already applied for this job
-  useEffect(() => {
-    const checkApplied = async () => {
-      if (!user || !job?.id) return;
-      try {
-        const appliedRef = doc(db, 'users', user.id as string, 'applied_jobs', job.id);
-        const appliedSnap = await getDoc(appliedRef);
-        setHasApplied(appliedSnap.exists());
-      } catch {
-        // Ignore errors
-      }
-    };
-    checkApplied();
-  }, [user, job?.id]);
-
   // import { useCallback } from "react"; // moved to top
 
   const fetchJob = useCallback(async () => {
@@ -108,8 +93,8 @@ const JobDetail = () => {
         skills: j.skills || [],
         requirements: j.requirements || '',
         benefits: j.benefits || '',
-        // ...removed token compensation...
-        // ...removed token amount...
+  // ...removed token compensation...
+  // ...removed token amount...
         requires_wallet: j.requires_wallet,
         created_at: j.created_at,
         expires_at: j.expires_at,
@@ -123,7 +108,6 @@ const JobDetail = () => {
           size_range: "",
           industry: ""
         },
-        companyId: j.companyId || ""
       });
     } catch (error) {
       console.error("Error fetching job:", error);
@@ -136,7 +120,7 @@ const JobDetail = () => {
     } finally {
       setLoading(false);
     }
-  }, [id, navigate, user?.role]);
+  }, [id, navigate]);
 
   const checkApplicationStatus = useCallback(async () => {
     // Implement if you add applications subcollection in Firestore
@@ -165,46 +149,17 @@ const JobDetail = () => {
       navigate('/profile');
       return;
     }
+
     setApplying(true);
     try {
-      // Save application in Firestore
-      const appliedRef = doc(db, 'users', user.id as string, 'applied_jobs', job.id);
-      await setDoc(appliedRef, {
+      // Store application in Firestore under applied_jobs subcollection
+      const appRef = doc(db, 'users', user.id, 'applied_jobs', job.id);
+      await setDoc(appRef, {
         jobId: job.id,
         appliedAt: new Date().toISOString(),
+        status: 'submitted',
       });
       setHasApplied(true);
-      // Send notification to company (try companyId, then companies.id)
-      let companyId = job.companyId;
-      if (!companyId && job.companies?.id) companyId = job.companies.id;
-      console.log('[Job Application] Attempting to notify company:', companyId);
-      if (!companyId) {
-        console.warn('[Job Application] No companyId found in job object:', job);
-      }
-      if (companyId) {
-        try {
-          const { addDoc, collection, serverTimestamp } = await import('firebase/firestore');
-          const notification = {
-            userId: companyId,
-            type: 'application',
-            category: 'application',
-            title: 'New Job Application',
-            message:
-              `${user.fullName ? user.fullName : user.email ? user.email : 'A user'} ` +
-              `applied for your job "${job.title}".`,
-            jobId: job.id,
-            applicantId: user.id,
-            timestamp: new Date().toLocaleString(),
-            createdAt: serverTimestamp(),
-            read: false,
-          };
-          console.log('[Job Application] Notification object:', notification);
-          await addDoc(collection(db, 'notifications'), notification);
-          console.log('[Job Application] Notification created for company:', companyId);
-        } catch (notifError) {
-          console.error('Failed to create notification:', notifError);
-        }
-      }
       toast.success('Application submitted successfully!');
     } catch (error: unknown) {
       toast.error('Failed to submit application');
@@ -275,10 +230,12 @@ const JobDetail = () => {
       <div className="min-h-screen bg-background">
         <Header />
         <main className="container mx-auto px-4 py-8">
-          <div className="text-center flex flex-col items-center justify-center min-h-[40vh]">
-            <h1 className="text-2xl font-bold mb-4">No jobs found</h1>
-            <p className="text-muted-foreground mb-6">Try adjusting your search criteria</p>
-            <Button onClick={() => navigate("/jobs")}>Back to Jobs</Button>
+          <div className="text-center">
+            <h1 className="text-2xl font-bold mb-4">Job not found</h1>
+            <Button onClick={() => navigate("/jobs")}>
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Jobs
+            </Button>
           </div>
         </main>
       </div>

@@ -517,65 +517,44 @@ const Settings = () => {
       // Validate file type
       if (!file.type.startsWith('image/')) {
         toast.error('Please select a valid image file');
+        setUploadingAvatar(false);
         return;
       }
 
       // Validate file size (max 2MB for base64 storage)
       if (file.size > 2 * 1024 * 1024) {
         toast.error('Image size must be less than 2MB');
+        setUploadingAvatar(false);
         return;
       }
 
       // Compress image
       const compressedFile = await compressImage(file);
-      
-      // Try Firebase Storage first, fallback to base64
-      try {
-        // Upload to Firebase Storage
-        const avatarRef = ref(storage, `avatars/${user.id}/${Date.now()}_${file.name}`);
-        const snapshot = await uploadBytes(avatarRef, compressedFile);
-        const downloadURL = await getDownloadURL(snapshot.ref);
 
-        // Delete old avatar if exists
-        if (profileData.avatar && profileData.avatar.includes('firebase')) {
-          try {
-            const oldAvatarRef = ref(storage, profileData.avatar);
-            await deleteObject(oldAvatarRef);
-          } catch (error: unknown) {
-            console.log('Old avatar not found or already deleted');
-          }
-        }
+      // Convert to base64
+      const fileToBase64 = (file: File): Promise<string> => {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+      };
 
-        setProfileData(prev => ({
-          ...prev,
-          avatar: downloadURL
-        }));
-
-        toast.success('Avatar uploaded successfully to cloud storage');
-      } catch (storageError: unknown) {
-        console.log('Firebase Storage failed, using base64 fallback:', storageError);
-        
-        // Fallback to base64 storage
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          const base64Data = e.target?.result as string;
-          
-          // Check if base64 data is within Firestore limits (1MB)
-          const base64Size = Math.ceil((base64Data.length * 3) / 4);
-          if (base64Size > 900000) { // Leave some buffer for other data
-            toast.error('Image is too large. Please select a smaller image.');
-            return;
-          }
-          
-          setProfileData(prev => ({
-            ...prev,
-            avatar: base64Data
-          }));
-          
-          toast.success('Avatar uploaded successfully (stored locally)');
-        };
-        reader.readAsDataURL(compressedFile);
+      const base64Data = await fileToBase64(compressedFile);
+      // Check if base64 data is within Firestore limits (1MB)
+      const base64Size = Math.ceil((base64Data.length * 3) / 4);
+      if (base64Size > 900000) { // Leave some buffer for other data
+        toast.error('Image is too large. Please select a smaller image.');
+        setUploadingAvatar(false);
+        return;
       }
+
+      // Update Firestore
+      const userRef = doc(db, 'users', user.id as string);
+      await updateDoc(userRef, { avatar: base64Data });
+      setProfileData(prev => ({ ...prev, avatar: base64Data }));
+      toast.success('Avatar uploaded successfully!');
     } catch (error: unknown) {
       console.error('Error uploading avatar:', error);
       toast.error('Failed to upload avatar. Please try again.');

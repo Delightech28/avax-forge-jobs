@@ -13,6 +13,7 @@ interface Profile {
 }
 
 interface User {
+  avatar?: string;
   avatarUrl?: string;
   profile?: Profile;
   fullName?: string;
@@ -154,7 +155,7 @@ const Header = () => {
               <div className="flex items-center space-x-2">
                 <div className="relative">
                   <Avatar className="h-8 w-8 cursor-pointer" onClick={() => navigate('/profile')}>
-                    <AvatarImage src={user.avatarUrl || user.profile?.avatar_url} />
+                    <AvatarImage src={user.avatar || user.avatarUrl || user.profile?.avatar_url} />
                     <AvatarFallback>
                       {user.fullName?.charAt(0) || user.profile?.full_name?.charAt(0) || user.email?.charAt(0) || 'U'}
                     </AvatarFallback>
