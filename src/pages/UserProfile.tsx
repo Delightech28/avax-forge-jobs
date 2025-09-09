@@ -10,12 +10,14 @@ interface Experience {
   title: string;
   company: string;
   period: string;
+  description?: string;
 }
 
 interface Education {
   degree: string;
   school: string;
   period: string;
+  description?: string;
 }
 
 interface User {
@@ -29,6 +31,7 @@ interface User {
   skills?: string[];
   experience?: Experience[];
   education?: Education[];
+  verified?: boolean;
 }
 
 const UserProfile = () => {
