@@ -318,7 +318,7 @@ const Profile = () => {
                 <div className="flex items-center gap-3 mb-2">
                   <h1 className="text-3xl font-bold flex items-center gap-2">
                     {user.role === 'company'
-                      ? <>{profileData.companyName || 'ArenaApp'}{' '}
+                      ? <>{profileData.companyName || 'Avax Forge Jobs'}{' '}
                           {subscribed && expirationDate ? (
                             <span
                               className="flex items-center gap-1 border border-blue-600 rounded-full px-3 py-1 bg-blue-50 cursor-pointer"

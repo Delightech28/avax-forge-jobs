@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { toast } from 'sonner';
 import Header from "@/components/Header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -14,12 +15,6 @@ type NotificationPrefs = {
     matches: boolean;
     updates: boolean;
     marketing: boolean;
-  };
-  push: {
-    status: boolean;
-    messages: boolean;
-    recommendations: boolean;
-    reminders: boolean;
   };
 };
 
@@ -99,8 +94,8 @@ const Notifications = () => {
   const [showUnreadOnly, setShowUnreadOnly] = useState(false); // Show all by default
   const [prefs, setPrefs] = useState({
     email: { application: true, matches: true, updates: true, marketing: false },
-    push: { status: true, messages: true, recommendations: false, reminders: false },
   });
+  const [savingPrefs, setSavingPrefs] = useState(false);
 
   // Persist unread count to localStorage for the header badge
   useEffect(() => {
@@ -125,31 +120,35 @@ const Notifications = () => {
     return () => window.removeEventListener('focus', onFocus);
   }, []);
 
-  // Load and save preferences from/to Firestore
+  // Real-time load of preferences from Firestore
   useEffect(() => {
-    const loadPrefs = async () => {
-      if (!user) return;
-      try {
-        const ref = doc(db, 'notification_settings', user.id as string);
-        const snap = await getDoc(ref);
+    if (!user) return;
+    const ref = doc(db, 'notification_settings', user.id as string);
+    let unsubscribe: (() => void) | undefined;
+    import('firebase/firestore').then(({ onSnapshot }) => {
+      unsubscribe = onSnapshot(ref, (snap) => {
         if (snap.exists()) {
           const data = snap.data() as NotificationPrefs;
           setPrefs(prev => ({ ...prev, ...data }));
         }
-      } catch (_) {
-        // Intentionally left blank: ignore errors when loading preferences
-      }
+      });
+    });
+    return () => {
+      if (unsubscribe) unsubscribe();
     };
-    loadPrefs();
   }, [user]);
 
   const savePreferences = async () => {
     if (!user) return;
+    setSavingPrefs(true);
     try {
       const ref = doc(db, 'notification_settings', user.id as string);
       await setDoc(ref, prefs, { merge: true });
-    } catch (_) {
-      // Intentionally left blank: ignore errors when saving preferences
+      toast.success('Preferences saved!');
+    } catch (err) {
+      toast.error('Failed to save preferences. Please try again.');
+    } finally {
+      setSavingPrefs(false);
     }
   };
 
@@ -484,41 +483,12 @@ const Notifications = () => {
                         </div>
                       </div>
 
-                      <div className="space-y-4">
-                        <h4 className="font-semibold text-foreground">Push Notifications</h4>
-                        <div className="space-y-3">
-                          {isCompany ? (
-                            <label className="flex items-center gap-3 cursor-pointer">
-                              <input type="checkbox" checked={prefs.push.reminders} onChange={(e)=>setPrefs(p=>({...p,push:{...p.push,reminders:e.target.checked}}))} className="rounded border-primary/30 text-primary focus:ring-primary" />
-                              <span className="text-sm text-foreground/70">Reminders</span>
-                            </label>
-                          ) : (
-                            <>
-                              <label className="flex items-center gap-3 cursor-pointer">
-                                <input type="checkbox" checked={prefs.push.status} onChange={(e)=>setPrefs(p=>({...p,push:{...p.push,status:e.target.checked}}))} className="rounded border-primary/30 text-primary focus:ring-primary" />
-                                <span className="text-sm text-foreground/70">Application status changes</span>
-                              </label>
-                              <label className="flex items-center gap-3 cursor-pointer">
-                                <input type="checkbox" checked={prefs.push.messages} onChange={(e)=>setPrefs(p=>({...p,push:{...p.push,messages:e.target.checked}}))} className="rounded border-primary/30 text-primary focus:ring-primary" />
-                                <span className="text-sm text-foreground/70">New messages</span>
-                              </label>
-                              <label className="flex items-center gap-3 cursor-pointer">
-                                <input type="checkbox" checked={prefs.push.recommendations} onChange={(e)=>setPrefs(p=>({...p,push:{...p.push,recommendations:e.target.checked}}))} className="rounded border-primary/30 text-primary focus:ring-primary" />
-                                <span className="text-sm text-foreground/70">Job recommendations</span>
-                              </label>
-                              <label className="flex items-center gap-3 cursor-pointer">
-                                <input type="checkbox" checked={prefs.push.reminders} onChange={(e)=>setPrefs(p=>({...p,push:{...p.push,reminders:e.target.checked}}))} className="rounded border-primary/30 text-primary focus:ring-primary" />
-                                <span className="text-sm text-foreground/70">Reminders</span>
-                              </label>
-                            </>
-                          )}
-                        </div>
-                      </div>
+                      {/* Push notification preferences removed as requested */}
                     </div>
                     
                     <div className="pt-4 border-t border-primary/20">
-                      <Button onClick={savePreferences} className="bg-primary hover:bg-primary/90 transition-colors">
-                        Save Preferences
+                      <Button onClick={savePreferences} className="bg-primary hover:bg-primary/90 transition-colors" disabled={savingPrefs}>
+                        {savingPrefs ? 'Saving...' : 'Save Preferences'}
                       </Button>
                     </div>
                   </CardContent>

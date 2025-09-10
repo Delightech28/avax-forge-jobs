@@ -1,6 +1,7 @@
 {
   "projects": {
-    "default": "avax-forge-jobs"
+    "default": "avax-forge-jobs",
+    "prod": "avax-forge-jobs"
   },
   "targets": {},
   "etags": {}

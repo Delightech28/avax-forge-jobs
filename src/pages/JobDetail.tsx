@@ -3,7 +3,7 @@ import { useParams, useNavigate, useLocation } from "react-router-dom";
 // Using Express API instead of Supabase
 import { useAuth } from "@/hooks/useAuth";
 import { db } from '@/integrations/firebase/client';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, getDocs, collection, Timestamp, where, query } from 'firebase/firestore';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -150,13 +150,28 @@ const JobDetail = () => {
       return;
     }
 
+    // Application limiting for non-verified users
+    const verifiedPlans = ["ProMonthly", "EliteMonthly", "ProAnnual", "EliteAnnual"];
+    if (!verifiedPlans.includes(user.verified || "")) {
+      // Only for Basic users
+      const now = new Date();
+      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+      const appsRef = collection(db, 'users', user.id, 'applied_jobs');
+      const q = query(appsRef, where('appliedAt', ">=", Timestamp.fromDate(monthStart)));
+      const snap = await getDocs(q);
+      if (snap.size >= 2) {
+        toast.error('You have reached your monthly limit of 2 job applications. Upgrade to apply for more jobs.');
+        return;
+      }
+    }
+
     setApplying(true);
     try {
       // Store application in Firestore under applied_jobs subcollection
       const appRef = doc(db, 'users', user.id, 'applied_jobs', job.id);
       await setDoc(appRef, {
         jobId: job.id,
-        appliedAt: new Date().toISOString(),
+        appliedAt: Timestamp.now(),
         status: 'submitted',
       });
       setHasApplied(true);

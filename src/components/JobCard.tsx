@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react';
+import { useAuth } from '@/hooks/useAuth';
+import { doc, setDoc, getDoc, getDocs, collection, Timestamp, where, query } from 'firebase/firestore';
+import { toast } from 'sonner';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { MapPin, Clock, DollarSign, Shield, Building } from "lucide-react";
 import { Link } from "react-router-dom";
-import { doc, getDoc } from 'firebase/firestore';
 import { db } from '@/integrations/firebase/client';
 
 interface JobCardProps {
@@ -29,6 +31,7 @@ interface JobCardProps {
 const companyVerificationCache: Record<string, boolean> = {};
 
 const JobCard = ({ job, isFeatured = false }: JobCardProps) => {
+  const { user } = useAuth();
   const [companyVerified, setCompanyVerified] = useState<boolean | null>(null);
 
   useEffect(() => {
@@ -106,34 +109,50 @@ const JobCard = ({ job, isFeatured = false }: JobCardProps) => {
   useEffect(() => {
   console.debug('[JobCard] companyId:', job.companyId, 'job.isVerified:', job.isVerified, 'companyVerified:', companyVerified);
   }, [job.companyId, job.isVerified, companyVerified]);
+  // Handler for job view limiting
+  const handleApplyClick = async (e: React.MouseEvent<HTMLAnchorElement, MouseEvent>) => {
+    if (!user) return; // Let auth logic handle redirect
+    const verifiedPlans = ["ProMonthly", "EliteMonthly", "ProAnnual", "EliteAnnual"];
+    if (verifiedPlans.includes(user.verified || "")) return; // Unlimited for verified
+
+    // Only for Basic users
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const viewsRef = collection(db, 'users', user.id, 'job_views');
+    const q = query(viewsRef, where('viewedAt', ">=", Timestamp.fromDate(monthStart)));
+    const snap = await getDocs(q);
+    if (snap.size >= 5) {
+      e.preventDefault();
+      toast.error('You have reached your monthly limit of 5 job views. Upgrade to view more jobs.');
+      return;
+    }
+    // Record this view
+    await setDoc(doc(viewsRef, job.id), {
+      jobId: job.id,
+      viewedAt: Timestamp.now(),
+    });
+    // Allow navigation
+  };
+
   return (
-    <Card className="group hover:shadow-xl transition-all duration-300 hover:-translate-y-1 glass-card border-border/50">
-      <CardHeader className="pb-3">
-        <div className="flex items-start justify-between">
-          <div className="flex items-center space-x-3">
-            <div className="w-12 h-12 bg-gradient-to-r from-primary/20 to-primary-glow/20 rounded-lg flex items-center justify-center overflow-hidden">
-              {job.companyId ? (
-                <Link to={`/company/${job.companyId}`} className="block w-full h-full">
-                  {job.logo_url ? (
-                    <img src={job.logo_url} alt={job.company} className="w-full h-full object-cover rounded-lg" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center">
-                      <Building className="h-6 w-6 text-primary" />
-                    </div>
-                  )}
-                </Link>
-              ) : (
-                job.logo_url ? (
-                  <img src={job.logo_url} alt={job.company} className="w-full h-full object-cover rounded-lg" />
+    <>
+      <Card className="group hover:shadow-xl transition-all duration-300 hover:-translate-y-1 glass-card border-border/50">
+        <CardHeader className="pb-3">
+          <div className="flex items-start justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="w-12 h-12 bg-gradient-to-r from-primary/20 to-primary-glow/20 rounded-lg flex items-center justify-center overflow-hidden">
+                {job.companyId ? (
+                  <Link to={`/company/${job.companyId}`} className="block w-full h-full">
+                    {job.logo_url ? (
+                      <img src={job.logo_url} alt={job.company} className="w-full h-full object-cover rounded-lg" />
+                    ) : (
+                      <Building className="h-6 w-6 text-muted-foreground" />
+                    )}
+                  </Link>
                 ) : (
-                  <Building className="h-6 w-6 text-primary" />
-                )
-              )}
-            </div>
-            <div>
-              <h3 className="font-semibold text-lg group-hover:text-primary transition-colors">
-                {job.title}
-              </h3>
+                  <Building className="h-6 w-6 text-muted-foreground" />
+                )}
+              </div>
               <div className="flex items-center gap-2">
                 <span className="text-muted-foreground text-sm">Posted by</span>
                 <Link
@@ -151,12 +170,11 @@ const JobCard = ({ job, isFeatured = false }: JobCardProps) => {
               </div>
             </div>
           </div>
-        </div>
-      </CardHeader>
+        </CardHeader>
 
-      <CardContent className="pb-4">
-        <p className="text-foreground/80 mb-4 line-clamp-2">{job.description}</p>
-        <div className="flex flex-wrap gap-2 mb-4">
+        <CardContent className="pb-4">
+          <p className="text-foreground/80 mb-4 line-clamp-2">{job.description}</p>
+          <div className="flex flex-wrap gap-2 mb-4">
           {job.tags.map((tag) => (
             <Badge key={tag} variant="secondary" className="text-xs">
               {tag}
@@ -193,11 +211,17 @@ const JobCard = ({ job, isFeatured = false }: JobCardProps) => {
             asChild
             disabled={isFeatured}
           >
-            <a href={isFeatured ? undefined : `/jobs/${job.id}?apply=1`}>Apply Now</a>
+            <a
+              href={isFeatured ? undefined : `/jobs/${job.id}?apply=1`}
+              onClick={handleApplyClick}
+            >
+              Apply Now
+            </a>
           </Button>
         </div>
       </CardFooter>
     </Card>
+    </>
   );
 };
 

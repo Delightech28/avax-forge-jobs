@@ -3,7 +3,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 import { Bell, User, LogOut, MessageSquare } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { db } from '@/integrations/firebase/client';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 
@@ -29,12 +29,51 @@ const Header = () => {
     if (typeof window === 'undefined') return 0;
     return parseInt(window.localStorage.getItem('unreadCount') || '0', 10) || 0;
   });
-
+  // Keep last known unread count while user is loading
+  const lastUnreadRef = useRef<number>(0);
   useEffect(() => {
-    // Set mock unread message count for now
-    if (user) {
-      setMessageCount(3); // Mock data - replace with real Firestore query later
-    }
+    if (unreadCount > 0) lastUnreadRef.current = unreadCount;
+  }, [unreadCount]);
+
+
+  // Listen for unread chat messages in all conversations
+  useEffect(() => {
+    if (!user || !('id' in user) || !user.id) return;
+    const userId = user.id;
+    let unsubConvs: (() => void) | null = null;
+    let unsubMsgs: (() => void)[] = [];
+    let unreadMap: Record<string, number> = {};
+    const convQ = query(
+      collection(db, 'conversations'),
+      where('participants', 'array-contains', userId)
+    );
+    unsubConvs = onSnapshot(convQ, (convSnap) => {
+      unsubMsgs.forEach(unsub => unsub());
+      unsubMsgs = [];
+      convSnap.docs.forEach(convDoc => {
+        const convId = convDoc.id;
+        const msgQ = query(
+          collection(db, 'conversations', convId, 'messages'),
+          where('read', '==', false)
+        );
+        const unsub = onSnapshot(msgQ, (msgSnap) => {
+          const unread = msgSnap.docs.filter(doc => doc.data().sender !== userId).length;
+          unreadMap[convId] = unread;
+          const sum = Object.values(unreadMap).reduce((a, b) => (typeof a === 'number' ? a : 0) + (typeof b === 'number' ? b : 0), 0);
+          setUnreadCount(sum);
+        });
+        unsubMsgs.push(unsub);
+      });
+    });
+    return () => {
+      if (unsubConvs) unsubConvs();
+      unsubMsgs.forEach(unsub => unsub());
+    };
+  }, [user]);
+
+  // If user logs out, reset unread count
+  useEffect(() => {
+    if (!user) setUnreadCount(0);
   }, [user]);
 
   useEffect(() => {
@@ -148,6 +187,11 @@ const Header = () => {
                   title="Messages"
                 >
                   <MessageSquare className="h-4 w-4" />
+                  {(unreadCount > 0 || (!user && lastUnreadRef.current > 0)) && (
+                    <div className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] leading-none rounded-full min-w-[14px] h-[14px] px-[3px] flex items-center justify-center">
+                      {user ? (unreadCount > 9 ? '9+' : unreadCount) : (lastUnreadRef.current > 9 ? '9+' : lastUnreadRef.current)}
+                    </div>
+                  )}
                 </Button>
               </>
             )}

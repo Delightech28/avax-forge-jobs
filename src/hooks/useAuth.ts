@@ -22,6 +22,7 @@ export interface AuthUser {
   role?: 'admin' | 'moderator' | 'user' | 'company';
   walletAddress?: string;
   createdAt?: string;
+  verified?: string;
 }
 
 export const useAuth = () => {
@@ -35,6 +36,20 @@ export const useAuth = () => {
         if (!fbUser) {
           setUser(null);
           return;
+        }
+        // Check if user doc exists in Firestore
+        const userDocRef = doc(db, 'users', fbUser.uid);
+        const userDoc = await getDoc(userDocRef);
+        if (!userDoc.exists()) {
+          // Create a minimal user doc if missing
+          await setDoc(userDocRef, {
+            email: fbUser.email || '',
+            fullName: fbUser.displayName || '',
+            role: 'user',
+            verified: 'Basic',
+            createdAt: serverTimestamp(),
+            lastLoginAt: serverTimestamp(),
+          }, { merge: true });
         }
         const mapped = await mapFirebaseUserToAuthUser(fbUser);
         setUser(mapped);
@@ -351,6 +366,7 @@ async function mapFirebaseUserToAuthUser(fbUser: FirebaseUser): Promise<AuthUser
     role: profile.role || 'user',
     walletAddress: profile.walletAddress || undefined,
     createdAt: createdAt,
+    verified: profile.verified || 'Basic',
     ...profile,
   } as AuthUser;
 }
