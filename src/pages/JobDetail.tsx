@@ -174,6 +174,19 @@ const JobDetail = () => {
         appliedAt: Timestamp.now(),
         status: 'submitted',
       });
+      // Send in-app notification to company
+      const companyId = job.company_id || job.companyId || (job.companies && job.companies.id);
+      if (companyId) {
+        await setDoc(doc(collection(db, 'notifications')), {
+          userId: companyId,
+          type: 'job_application',
+          jobId: job.id,
+          applicantId: user.id,
+          createdAt: Timestamp.now(),
+          message: `You have a new application for your job: ${job.title}`,
+          read: false,
+        });
+      }
       setHasApplied(true);
       toast.success('Application submitted successfully!');
     } catch (error: unknown) {
