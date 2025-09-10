@@ -153,20 +153,23 @@ const JobCard = ({ job, isFeatured = false }: JobCardProps) => {
                   <Building className="h-6 w-6 text-muted-foreground" />
                 )}
               </div>
-              <div className="flex items-center gap-2">
-                <span className="text-muted-foreground text-sm">Posted by</span>
-                <Link
-                  to={`/company/${job.companyId ? job.companyId : encodeURIComponent(job.company)}`}
-                  className="text-foreground/70 text-sm font-medium hover:text-primary"
-                >
-                  {job.company}
-                </Link>
-                {(companyVerified === true) && (
-                  <span className="flex items-center gap-1">
-                    <Shield className="h-4 w-4 text-primary" />
-                    <span className="text-xs text-primary">Verified</span>
-                  </span>
-                )}
+              <div>
+                <h3 className="text-lg font-semibold text-foreground mb-1 line-clamp-1">{job.title}</h3>
+                <div className="flex items-center gap-2">
+                  <span className="text-muted-foreground text-sm">Posted by</span>
+                  <Link
+                    to={`/company/${job.companyId ? job.companyId : encodeURIComponent(job.company)}`}
+                    className="text-foreground/70 text-sm font-medium hover:text-primary"
+                  >
+                    {job.company}
+                  </Link>
+                  {(companyVerified === true) && (
+                    <span className="flex items-center gap-1">
+                      <Shield className="h-4 w-4 text-primary" />
+                      <span className="text-xs text-primary">Verified</span>
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
           </div>
