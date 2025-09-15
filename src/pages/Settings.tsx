@@ -352,14 +352,19 @@ const Settings = () => {
   };
 
   const addSkill = () => {
-    if (newSkill.trim() && !profileData.skills.includes(newSkill.trim())) {
+    const skillLimit = isVerifiedUser ? Infinity : 3;
+    if (
+      newSkill.trim() &&
+      !profileData.skills.includes(newSkill.trim()) &&
+      profileData.skills.length < skillLimit
+    ) {
       setProfileData(prev => ({
         ...prev,
         skills: [...prev.skills, newSkill.trim()]
       }));
       setNewSkill("");
     }
-  };
+  }
 
   const removeSkill = (skillToRemove: string) => {
     setProfileData(prev => ({
@@ -369,14 +374,19 @@ const Settings = () => {
   };
 
   const addExperience = () => {
-    if (newExperience.title && newExperience.company) {
+    const experienceLimit = isVerifiedUser ? Infinity : 2;
+    if (
+      newExperience.title &&
+      newExperience.company &&
+      profileData.experience.length < experienceLimit
+    ) {
       setProfileData(prev => ({
         ...prev,
         experience: [...prev.experience, { ...newExperience }]
       }));
       setNewExperience({ title: "", company: "", period: "", description: "" });
     }
-  };
+  }
 
   const removeExperience = (index: number) => {
     setProfileData(prev => ({
@@ -973,10 +983,16 @@ const Settings = () => {
                     <Input
                       value={newSkill}
                       onChange={(e) => setNewSkill(e.target.value)}
-                      placeholder="Add a skill"
+                      placeholder={isVerifiedUser ? "Add a skill" : "Add up to 3 skills"}
                       onKeyPress={(e) => e.key === 'Enter' && addSkill()}
+                      disabled={!isVerifiedUser && profileData.skills.length >= 3}
+                      onClick={() => {
+                        if (!isVerifiedUser && profileData.skills.length >= 3) {
+                          toast.error('Non-verified users can only add up to 3 skills.');
+                        }
+                      }}
                     />
-                    <Button onClick={addSkill} size="sm">
+                    <Button onClick={addSkill} size="sm" disabled={!isVerifiedUser && profileData.skills.length >= 3}>
                       <Plus className="h-4 w-4" />
                     </Button>
                   </div>
@@ -1033,24 +1049,33 @@ const Settings = () => {
                   <Input
                     value={newExperience.title}
                     onChange={(e) => setNewExperience(prev => ({ ...prev, title: e.target.value }))}
-                    placeholder="Job Title"
+                    placeholder={isVerifiedUser ? "Job Title" : "Job Title (max 2 experiences)"}
+                    disabled={!isVerifiedUser && profileData.experience.length >= 2}
+                    onClick={() => {
+                      if (!isVerifiedUser && profileData.experience.length >= 2) {
+                        toast.error('Non-verified users can only add up to 2 professional experiences.');
+                      }
+                    }}
                   />
                   <Input
                     value={newExperience.company}
                     onChange={(e) => setNewExperience(prev => ({ ...prev, company: e.target.value }))}
                     placeholder="Company"
+                    disabled={!isVerifiedUser && profileData.experience.length >= 2}
                   />
                   <Input
                     value={newExperience.period}
                     onChange={(e) => setNewExperience(prev => ({ ...prev, period: e.target.value }))}
                     placeholder="Period (e.g., 2022 - Present)"
+                    disabled={!isVerifiedUser && profileData.experience.length >= 2}
                   />
                   <Textarea
                     value={newExperience.description}
                     onChange={(e) => setNewExperience(prev => ({ ...prev, description: e.target.value }))}
                     placeholder="Description"
+                    disabled={!isVerifiedUser && profileData.experience.length >= 2}
                   />
-                  <Button onClick={addExperience} size="sm">
+                  <Button onClick={addExperience} size="sm" disabled={!isVerifiedUser && profileData.experience.length >= 2}>
                     <Plus className="h-4 w-4 mr-2" />
                     Add Experience
                   </Button>

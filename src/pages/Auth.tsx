@@ -414,11 +414,11 @@ const Auth = () => {
                  </Button>
                 
                 {/* Error message display */}
-                {errorMessage && (
-                  <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-md">
-                    <p className="text-sm text-destructive text-center">{errorMessage}</p>
-                  </div>
-                )}
+                  {errorMessage && errorMessage !== 'Invalid email or password. Please check your credentials and try again.' && (
+                    <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-md">
+                      <p className="text-sm text-destructive text-center">{errorMessage}</p>
+                    </div>
+                  )}
                 
                 {/* Helpful guidance text */}
                 <div className="text-xs text-muted-foreground text-center space-y-1 pt-2">

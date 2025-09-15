@@ -13,7 +13,6 @@ const tiers = [
 			"Create profile & basic resume upload",
 			"Access to 5 job listings per month",
 			"Apply to 2 jobs per month",
-			"Basic AI assistance: resume keyword check",
 			"Access to community forums",
 		],
 		highlight: false,

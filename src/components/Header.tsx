@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import { Users } from "@/components/ui/icons";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
@@ -42,7 +43,7 @@ const Header = () => {
     const userId = user.id;
     let unsubConvs: (() => void) | null = null;
     let unsubMsgs: (() => void)[] = [];
-    let unreadMap: Record<string, number> = {};
+    const unreadMap: Record<string, number> = {};
     const convQ = query(
       collection(db, 'conversations'),
       where('participants', 'array-contains', userId)
@@ -163,6 +164,15 @@ const Header = () => {
           <div className="flex items-center space-x-4">
             {user && (
               <>
+                <Button 
+                  variant="ghost" 
+                  size="icon"
+                  onClick={() => navigate('/community')}
+                  aria-label="Community Forum"
+                  className="text-muted-foreground hover:text-foreground relative"
+                >
+                  <Users className="h-4 w-4" />
+                </Button>
                 <Button 
                   variant="ghost" 
                   size="icon"

@@ -22,6 +22,7 @@ import Billing from "./pages/Billing";
 import CompanyProfile from "./pages/CompanyProfile";
 import ViewApplicants from "./pages/ViewApplicants";
 import UserProfile from "./pages/UserProfile";
+import { Community } from './pages/Community';
 
 // Scroll to top on route change
 const ScrollToTop = () => {
@@ -61,6 +62,7 @@ function App() {
         <Route path="/billing" element={<Billing />} />
         <Route path="/view-applicants" element={<ViewApplicants />} />
         <Route path="/user-profile/:userId" element={<UserProfile />} />
+        <Route path="/community" element={<Community />} />
       </Routes>
       <Toaster />
     </Router>

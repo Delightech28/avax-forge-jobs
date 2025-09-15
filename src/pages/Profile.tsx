@@ -393,12 +393,25 @@ const Profile = () => {
                         <Calendar className="h-4 w-4" />
                         Member Since {(() => {
                           if (profileData.createdAt) {
-                            const date = new Date(profileData.createdAt);
+                            // Try to parse Firestore timestamp string
+                            let date;
+                            if (typeof profileData.createdAt === 'string' && profileData.createdAt.includes('at')) {
+                              // Example: 'September 15, 2025 at 7:07:08 AM UTC+1'
+                              // Remove 'at ...' and parse only the date part
+                              const datePart = profileData.createdAt.split(' at ')[0];
+                              date = new Date(datePart);
+                              if (isNaN(date.getTime())) {
+                                // Fallback: try parsing whole string
+                                date = new Date(profileData.createdAt);
+                              }
+                            } else {
+                              date = new Date(profileData.createdAt);
+                            }
                             if (!isNaN(date.getTime())) {
                               return date.toLocaleString('en-US', { month: 'long', year: 'numeric' });
                             }
                           }
-                          return 'Unknown';
+                          return '';
                         })()}
                       </span>
                       {profileData.locationPolicy && (
