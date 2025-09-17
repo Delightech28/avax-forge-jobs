@@ -13,6 +13,7 @@ type Company = {
   companyName?: string;
   name?: string;
   displayName?: string;
+  fullName?: string;
   industry?: string;
   aboutCompany?: string;
   website?: string;
@@ -26,6 +27,7 @@ type Company = {
   verified_plan?: string;
   is_verified?: boolean;
   companyLogo?: string;
+  avatar?: string;
   contactEmail?: string;
   twitter?: string;
   linkedin?: string;
@@ -55,26 +57,32 @@ const CompanyProfile = () => {
           const userRef = doc(db, 'users', id);
           const userSnap = await getDoc(userRef);
           if (userSnap.exists()) {
-            setCompany(userSnap.data());
-          } else {
-            // If `id` looks like an encoded name, try searching companies by name
-            const decoded = decodeURIComponent(id);
-            try {
-              const companiesRef = collection(db, 'companies');
-              const q = query(companiesRef, where('companyName', '==', decoded));
-              const qsnap = await getDocs(q);
-              if (!qsnap.empty) {
-                setCompany(qsnap.docs[0].data());
-              } else {
-                // search users by fullName or companyName
-                const usersRef = collection(db, 'users');
-                const qu = query(usersRef, where('companyName', '==', decoded));
-                const uSnap = await getDocs(qu);
-                if (!uSnap.empty) setCompany(uSnap.docs[0].data());
-              }
-            } catch (err) {
-              // ignore search errors
+            const userData = userSnap.data();
+            if (userData.role === 'company') {
+              setCompany(userData);
+              return;
             }
+          }
+          // If `id` looks like an encoded name, try searching companies by name
+          const decoded = decodeURIComponent(id);
+          try {
+            const companiesRef = collection(db, 'companies');
+            const q = query(companiesRef, where('companyName', '==', decoded));
+            const qsnap = await getDocs(q);
+            if (!qsnap.empty) {
+              setCompany(qsnap.docs[0].data());
+            } else {
+              // search users by fullName or companyName
+              const usersRef = collection(db, 'users');
+              const qu = query(usersRef, where('companyName', '==', decoded));
+              const uSnap = await getDocs(qu);
+              if (!uSnap.empty) {
+                const userData = uSnap.docs[0].data();
+                if (userData.role === 'company') setCompany(userData);
+              }
+            }
+          } catch (err) {
+            // ignore search errors
           }
         }
       } catch (err) {
@@ -112,15 +120,15 @@ const CompanyProfile = () => {
           <CardHeader>
             <div className="flex items-center gap-4">
               <Avatar className="w-16 h-16">
-                {company.logo_url || company.companyLogo ? (
-                  <AvatarImage src={company.logo_url || company.companyLogo} />
+                {company.avatar || company.logo_url || company.companyLogo ? (
+                  <AvatarImage src={company.avatar || company.logo_url || company.companyLogo} />
                 ) : (
-                  <AvatarFallback className="text-lg">{(company.companyName || company.name || "").charAt(0)}</AvatarFallback>
+                  <AvatarFallback className="text-lg">{(company.companyName || company.name || company.displayName || company.fullName || '').charAt(0)}</AvatarFallback>
                 )}
               </Avatar>
               <div className="flex-1">
                 <CardTitle className="flex items-center gap-2 m-0 text-xl">
-                  {company.companyName || company.name || company.displayName || 'Company'}
+                  {company.companyName || company.name || company.displayName || company.fullName || 'Company'}
                   {(() => {
                     const verifiedPlans = ['ProMonthly', 'ProAnnual', 'EliteMonthly', 'EliteAnnual'];
                     const isVerifiedFlag = !!(

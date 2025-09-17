@@ -32,6 +32,7 @@ import { db } from "@/integrations/firebase/client";
 import { collection, addDoc, getDocs, serverTimestamp, query, orderBy } from "firebase/firestore";
 import { doc, updateDoc, arrayUnion, arrayRemove, getDoc } from "firebase/firestore";
 import { useAuth } from "@/hooks/useAuth";
+import Header from "@/components/Header";
 
 // No mockup data
 
@@ -180,17 +181,22 @@ export const Community = () => {
     const likedBy: string[] = Array.isArray(data.likedBy) ? data.likedBy : [];
     const alreadyLiked = likedBy.includes(user.uid || user.id);
     try {
+      let updatePayload;
       if (alreadyLiked) {
-        await updateDoc(postRef, {
+        updatePayload = {
           likes: (data.likes || 1) - 1,
           likedBy: arrayRemove(user.uid || user.id),
-        });
+        };
+        console.log("[Like] Unlike payload:", updatePayload);
+        await updateDoc(postRef, updatePayload);
         setLikedPosts(prev => prev.filter(id => id !== postId));
       } else {
-        await updateDoc(postRef, {
+        updatePayload = {
           likes: (data.likes || 0) + 1,
           likedBy: arrayUnion(user.uid || user.id),
-        });
+        };
+        console.log("[Like] Like payload:", updatePayload);
+        await updateDoc(postRef, updatePayload);
         setShowLikeEmoji(e => ({ ...e, [postId]: true }));
         setTimeout(() => {
           setShowLikeEmoji(e => ({ ...e, [postId]: false }));
@@ -218,9 +224,9 @@ export const Community = () => {
           replies: Array.isArray(data.replies) ? data.replies : [],
         };
       });
-  setPosts(realPosts);
+      setPosts(realPosts);
     } catch (err) {
-      // Optionally show error
+      console.error("[Like] Firestore update error:", err);
     }
   };
 
@@ -253,9 +259,11 @@ export const Community = () => {
       avatarUrl,
     };
     try {
-      await updateDoc(postRef, {
+      const updatePayload = {
         replies: arrayUnion(newReply),
-      });
+      };
+      console.log("[Reply] Reply payload:", updatePayload);
+      await updateDoc(postRef, updatePayload);
       setReplyInput("");
       // Refetch posts to update UI (no shuffle)
       const q = query(collection(db, "community_posts"), orderBy("createdAt", "desc"));
@@ -280,12 +288,13 @@ export const Community = () => {
       });
       setPosts(realPosts);
     } catch (err) {
-      // Optionally show error
+      console.error("[Reply] Firestore update error:", err);
     }
   };
 
   return (
     <div className="min-h-screen bg-background">
+      <Header />
       <div className="container mx-auto px-4 py-8">
         <Card className="mb-8">
           <CardHeader>

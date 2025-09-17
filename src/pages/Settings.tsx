@@ -794,13 +794,13 @@ const Settings = () => {
                           </span>
                         </Button>
                       </Label>
-                      <input
-                        id="avatar"
-                        type="file"
-                        accept="image/*"
+                      <Input
                         onChange={handleAvatarUpload}
                         className="hidden"
                         disabled={uploadingAvatar}
+                        type="file"
+                        accept="image/*"
+                        id="avatar"
                       />
                     </div>
                   )}
@@ -811,7 +811,7 @@ const Settings = () => {
                   {editing ? (
                     <Input
                       id="fullName"
-                      value={profileData.fullName}
+                      value={profileData.fullName ?? ""}
                       onChange={(e) => setProfileData(prev => ({ ...prev, fullName: e.target.value }))}
                       placeholder="Enter your full name"
                     />
@@ -826,7 +826,7 @@ const Settings = () => {
                     <div className="relative">
                       <Textarea
                         id="bio"
-                        value={profileData.bio}
+                        value={profileData.bio ?? ""}
                         onChange={(e) => setProfileData(prev => ({ ...prev, bio: e.target.value }))}
                         placeholder={isCompany ? 'Tell us about your company' : 'Tell us about yourself'}
                         {...(!isVerifiedUser && !isCompany ? { maxLength: 100 } : {})}
@@ -848,7 +848,7 @@ const Settings = () => {
                   {editing ? (
                     <Input
                       id="location"
-                      value={profileData.location}
+                      value={profileData.location ?? ""}
                       onChange={(e) => setProfileData(prev => ({ ...prev, location: e.target.value }))}
                       placeholder="Enter your location"
                     />
@@ -879,7 +879,7 @@ const Settings = () => {
                           <div key={idx} className="flex items-start gap-2">
                             <div className="flex-1">
                               <Input
-                                value={site}
+                                value={site ?? ""}
                                 maxLength={MAX_URL_LENGTH}
                                 onChange={(e) => {
                                   const v = e.target.value;
@@ -930,7 +930,7 @@ const Settings = () => {
                       <div>
                         <Input
                           id="website"
-                          value={profileData.website}
+                          value={profileData.website ?? ""}
                           maxLength={MAX_URL_LENGTH}
                           onChange={(e) => {
                             const v = e.target.value;
@@ -981,7 +981,7 @@ const Settings = () => {
                 {editing && (
                   <div className="flex gap-2">
                     <Input
-                      value={newSkill}
+                      value={newSkill ?? ""}
                       onChange={(e) => setNewSkill(e.target.value)}
                       placeholder={isVerifiedUser ? "Add a skill" : "Add up to 3 skills"}
                       onKeyPress={(e) => e.key === 'Enter' && addSkill()}
@@ -1047,7 +1047,7 @@ const Settings = () => {
               {editing && (
                 <div className="space-y-3 p-4 border rounded-lg">
                   <Input
-                    value={newExperience.title}
+                    value={newExperience.title ?? ""}
                     onChange={(e) => setNewExperience(prev => ({ ...prev, title: e.target.value }))}
                     placeholder={isVerifiedUser ? "Job Title" : "Job Title (max 2 experiences)"}
                     disabled={!isVerifiedUser && profileData.experience.length >= 2}
@@ -1058,19 +1058,19 @@ const Settings = () => {
                     }}
                   />
                   <Input
-                    value={newExperience.company}
+                    value={newExperience.company ?? ""}
                     onChange={(e) => setNewExperience(prev => ({ ...prev, company: e.target.value }))}
                     placeholder="Company"
                     disabled={!isVerifiedUser && profileData.experience.length >= 2}
                   />
                   <Input
-                    value={newExperience.period}
+                    value={newExperience.period ?? ""}
                     onChange={(e) => setNewExperience(prev => ({ ...prev, period: e.target.value }))}
                     placeholder="Period (e.g., 2022 - Present)"
                     disabled={!isVerifiedUser && profileData.experience.length >= 2}
                   />
                   <Textarea
-                    value={newExperience.description}
+                    value={newExperience.description ?? ""}
                     onChange={(e) => setNewExperience(prev => ({ ...prev, description: e.target.value }))}
                     placeholder="Description"
                     disabled={!isVerifiedUser && profileData.experience.length >= 2}
@@ -1126,22 +1126,22 @@ const Settings = () => {
               {editing && (
                 <div className="space-y-3 p-4 border rounded-lg">
                   <Input
-                    value={newEducation.degree}
+                    value={newEducation.degree ?? ""}
                     onChange={(e) => setNewEducation(prev => ({ ...prev, degree: e.target.value }))}
                     placeholder="Degree"
                   />
                   <Input
-                    value={newEducation.school}
+                    value={newEducation.school ?? ""}
                     onChange={(e) => setNewEducation(prev => ({ ...prev, school: e.target.value }))}
                     placeholder="School/University"
                   />
                   <Input
-                    value={newEducation.period}
+                    value={newEducation.period ?? ""}
                     onChange={(e) => setNewEducation(prev => ({ ...prev, period: e.target.value }))}
                     placeholder="Period (e.g., 2016 - 2020)"
                   />
                   <Textarea
-                    value={newEducation.description}
+                    value={newEducation.description ?? ""}
                     onChange={(e) => setNewEducation(prev => ({ ...prev, description: e.target.value }))}
                     placeholder="Description"
                   />
@@ -1196,33 +1196,33 @@ const Settings = () => {
                 {editing && (
                   <div className="space-y-3 p-4 border rounded-lg">
                     <Input
-                      value={newCertification.title}
+                      value={newCertification.title ?? ""}
                       onChange={(e) => setNewCertification(prev => ({ ...prev, title: e.target.value }))}
                       placeholder="Certification title (e.g. AWS Certified Solutions Architect)"
                     />
                     <Input
-                      value={newCertification.issuer}
+                      value={newCertification.issuer ?? ""}
                       onChange={(e) => setNewCertification(prev => ({ ...prev, issuer: e.target.value }))}
                       placeholder="Issuer (e.g. Amazon Web Services)"
                     />
                     <Input
-                      value={newCertification.date}
+                      value={newCertification.date ?? ""}
                       onChange={(e) => setNewCertification(prev => ({ ...prev, date: e.target.value }))}
                       placeholder="Date (e.g. 2023-05 or May 2023)"
                     />
                     <Input
-                      value={newCertification.credentialId}
+                      value={newCertification.credentialId ?? ""}
                       onChange={(e) => setNewCertification(prev => ({ ...prev, credentialId: e.target.value }))}
                       placeholder="Credential ID (optional)"
                     />
                     <Input
-                      value={newCertification.credentialUrl}
+                      value={newCertification.credentialUrl ?? ""}
                       onChange={(e) => setNewCertification(prev => ({ ...prev, credentialUrl: e.target.value }))}
                       placeholder="Credential URL (optional)"
                     />
                     {certUrlError && <div className="text-xs text-red-600">{certUrlError}</div>}
                     <Textarea
-                      value={newCertification.description}
+                      value={newCertification.description ?? ""}
                       onChange={(e) => setNewCertification(prev => ({ ...prev, description: e.target.value }))}
                       placeholder="Description (optional)"
                     />
@@ -1238,13 +1238,13 @@ const Settings = () => {
                     <div key={index} className="p-3 border rounded-lg">
                       {editingCertificationIndex === index ? (
                         <div className="space-y-2">
-                          <Input value={editCertification?.title || ''} onChange={(e) => setEditCertification(prev => prev ? ({ ...prev, title: e.target.value }) : prev)} placeholder="Title" />
-                          <Input value={editCertification?.issuer || ''} onChange={(e) => setEditCertification(prev => prev ? ({ ...prev, issuer: e.target.value }) : prev)} placeholder="Issuer" />
-                          <Input value={editCertification?.date || ''} onChange={(e) => setEditCertification(prev => prev ? ({ ...prev, date: e.target.value }) : prev)} placeholder="Date (e.g. May 2023)" />
-                          <Input value={editCertification?.credentialId || ''} onChange={(e) => setEditCertification(prev => prev ? ({ ...prev, credentialId: e.target.value }) : prev)} placeholder="Credential ID (optional)" />
-                          <Input value={editCertification?.credentialUrl || ''} onChange={(e) => setEditCertification(prev => prev ? ({ ...prev, credentialUrl: e.target.value }) : prev)} placeholder="Credential URL (optional)" />
+                          <Input value={editCertification?.title ?? ''} onChange={(e) => setEditCertification(prev => prev ? ({ ...prev, title: e.target.value }) : prev)} placeholder="Title" />
+                          <Input value={editCertification?.issuer ?? ''} onChange={(e) => setEditCertification(prev => prev ? ({ ...prev, issuer: e.target.value }) : prev)} placeholder="Issuer" />
+                          <Input value={editCertification?.date ?? ''} onChange={(e) => setEditCertification(prev => prev ? ({ ...prev, date: e.target.value }) : prev)} placeholder="Date (e.g. May 2023)" />
+                          <Input value={editCertification?.credentialId ?? ''} onChange={(e) => setEditCertification(prev => prev ? ({ ...prev, credentialId: e.target.value }) : prev)} placeholder="Credential ID (optional)" />
+                          <Input value={editCertification?.credentialUrl ?? ''} onChange={(e) => setEditCertification(prev => prev ? ({ ...prev, credentialUrl: e.target.value }) : prev)} placeholder="Credential URL (optional)" />
                           {editCertUrlError && <div className="text-xs text-red-600">{editCertUrlError}</div>}
-                          <Textarea value={editCertification?.description || ''} onChange={(e) => setEditCertification(prev => prev ? ({ ...prev, description: e.target.value }) : prev)} placeholder="Description (optional)" />
+                          <Textarea value={editCertification?.description ?? ''} onChange={(e) => setEditCertification(prev => prev ? ({ ...prev, description: e.target.value }) : prev)} placeholder="Description (optional)" />
                           <div className="flex gap-2">
                             <Button size="sm" onClick={() => saveEditedCertification(index)}>Save</Button>
                             <Button size="sm" variant="outline" onClick={cancelEditCertification}>Cancel</Button>
@@ -1345,12 +1345,12 @@ const Settings = () => {
                 {editing ? (
                   <Input
                     id="companyName"
-                    value={profileData.companyName}
+                    value={profileData.companyName ?? profileData.fullName ?? ''}
                     onChange={(e) => setProfileData(prev => ({ ...prev, companyName: e.target.value }))}
                     placeholder="Enter your company name"
                   />
                 ) : (
-                  <p className="text-sm text-muted-foreground py-2">{profileData.companyName || "Not set"}</p>
+                  <p className="text-sm text-muted-foreground py-2">{profileData.companyName || profileData.fullName ||  "Not set"}</p>
                 )}
               </div>
 
@@ -1359,7 +1359,7 @@ const Settings = () => {
                 {editing ? (
                   <Input
                     id="industry"
-                    value={profileData.industry}
+                    value={profileData.industry ?? ''}
                     onChange={(e) => setProfileData(prev => ({ ...prev, industry: e.target.value }))}
                     placeholder="e.g., Blockchain, DeFi, NFT"
                   />
@@ -1373,7 +1373,7 @@ const Settings = () => {
                 {editing ? (
                   <Textarea
                     id="aboutCompany"
-                    value={profileData.aboutCompany}
+                    value={profileData.aboutCompany ?? ''}
                     onChange={(e) => setProfileData(prev => ({ ...prev, aboutCompany: e.target.value }))}
                     placeholder="2-3 sentences describing your mission"
                     maxLength={300}
@@ -1388,7 +1388,7 @@ const Settings = () => {
                 {editing ? (
                   <Input
                     id="website"
-                    value={profileData.website}
+                    value={profileData.website ?? ''}
                     onChange={(e) => setProfileData(prev => ({ ...prev, website: e.target.value }))}
                     placeholder="https://yourcompany.com"
                   />
@@ -1403,7 +1403,7 @@ const Settings = () => {
                   {editing ? (
                     <Input
                       id="twitter"
-                      value={profileData.twitter}
+                      value={profileData.twitter ?? ''}
                       onChange={(e) => setProfileData(prev => ({ ...prev, twitter: e.target.value }))}
                       placeholder="https://x.com/yourcompany"
                     />
@@ -1416,7 +1416,7 @@ const Settings = () => {
                   {editing ? (
                     <Input
                       id="linkedin"
-                      value={profileData.linkedin}
+                      value={profileData.linkedin ?? ''}
                       onChange={(e) => setProfileData(prev => ({ ...prev, linkedin: e.target.value }))}
                       placeholder="https://linkedin.com/company/yourcompany"
                     />
@@ -1429,7 +1429,7 @@ const Settings = () => {
                   {editing ? (
                     <Input
                       id="discord"
-                      value={profileData.discord}
+                      value={profileData.discord ?? ''}
                       onChange={(e) => setProfileData(prev => ({ ...prev, discord: e.target.value }))}
                       placeholder="https://discord.gg/yourserver"
                     />
@@ -1442,7 +1442,7 @@ const Settings = () => {
                   {editing ? (
                     <Input
                       id="locationPolicy"
-                      value={profileData.locationPolicy}
+                      value={profileData.locationPolicy ?? ''}
                       onChange={(e) => setProfileData(prev => ({ ...prev, locationPolicy: e.target.value }))}
                       placeholder="Enter your company location"
                     />
@@ -1455,7 +1455,7 @@ const Settings = () => {
                   {editing ? (
                     <Input
                       id="companySize"
-                      value={profileData.companySize}
+                      value={profileData.companySize ?? ''}
                       onChange={(e) => setProfileData(prev => ({ ...prev, companySize: e.target.value }))}
                       placeholder="e.g., 1-10, 11-50, 51-200"
                     />
@@ -1470,7 +1470,7 @@ const Settings = () => {
                 {editing ? (
                   <Textarea
                     id="visionCulture"
-                    value={profileData.visionCulture}
+                    value={profileData.visionCulture ?? ''}
                     onChange={(e) => setProfileData(prev => ({ ...prev, visionCulture: e.target.value }))}
                     placeholder="Why work with you? Highlight your values."
                     maxLength={400}
@@ -1486,7 +1486,7 @@ const Settings = () => {
                   <Input
                     id="contactEmail"
                     type="email"
-                    value={profileData.contactEmail}
+                    value={profileData.contactEmail ?? ''}
                     onChange={(e) => setProfileData(prev => ({ ...prev, contactEmail: e.target.value }))}
                     placeholder="contact@company.com"
                   />
@@ -1590,7 +1590,7 @@ const Settings = () => {
                       <Input
                         id="currentPassword"
                         type="password"
-                        value={passwordData.currentPassword}
+                        value={passwordData.currentPassword ?? ''}
                         onChange={(e) => setPasswordData(prev => ({ ...prev, currentPassword: e.target.value }))}
                         placeholder="Enter your current password"
                       />
@@ -1600,7 +1600,7 @@ const Settings = () => {
                       <Input
                         id="newPassword"
                         type="password"
-                        value={passwordData.newPassword}
+                        value={passwordData.newPassword ?? ''}
                         onChange={(e) => setPasswordData(prev => ({ ...prev, newPassword: e.target.value }))}
                         placeholder="Enter your new password"
                       />
@@ -1610,7 +1610,7 @@ const Settings = () => {
                       <Input
                         id="confirmPassword"
                         type="password"
-                        value={passwordData.confirmPassword}
+                        value={passwordData.confirmPassword ?? ''}
                         onChange={(e) => setPasswordData(prev => ({ ...prev, confirmPassword: e.target.value }))}
                         placeholder="Confirm your new password"
                       />

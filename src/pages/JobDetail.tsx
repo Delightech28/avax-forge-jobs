@@ -120,7 +120,7 @@ const JobDetail = () => {
     } finally {
       setLoading(false);
     }
-  }, [id, navigate]);
+  }, [id, navigate, user?.role]);
 
   const checkApplicationStatus = useCallback(async () => {
     // Implement if you add applications subcollection in Firestore
@@ -175,7 +175,7 @@ const JobDetail = () => {
         status: 'submitted',
       });
       // Send in-app notification to company
-      const companyId = job.company_id || job.companyId || (job.companies && job.companies.id);
+      const companyId = job.companyId || (job.companies && job.companies.id);
       if (companyId) {
         await setDoc(doc(collection(db, 'notifications')), {
           userId: companyId,

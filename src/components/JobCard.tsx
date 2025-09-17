@@ -8,7 +8,7 @@ import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
 import { MapPin, Clock, DollarSign, Shield, Building } from "lucide-react";
 import { Link } from "react-router-dom";
 import { db } from '@/integrations/firebase/client';
-
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 interface JobCardProps {
   job: {
     id: string;
@@ -158,12 +158,18 @@ const JobCard = ({ job, isFeatured = false }: JobCardProps) => {
                 <div className="flex items-center gap-2">
                   <span className="text-muted-foreground text-sm">Posted by</span>
                   <Link
-                    to={`/company/${job.companyId ? job.companyId : encodeURIComponent(job.company)}`}
-                    className="text-foreground/70 text-sm font-medium hover:text-primary"
+                    to={`/company/${job.companyId || encodeURIComponent(job.company)}`}
+                    className="text-foreground/70 text-sm font-medium hover:text-primary cursor-pointer"
+                    onClick={() => {
+                      console.log('[JobCard] Company link clicked:', {
+                        companyId: job.companyId,
+                        company: job.company
+                      });
+                    }}
                   >
                     {job.company}
                   </Link>
-                  {(companyVerified === true) && (
+                  {companyVerified === true && (
                     <span className="flex items-center gap-1">
                       <Shield className="h-4 w-4 text-primary" />
                       <span className="text-xs text-primary">Verified</span>

@@ -26,10 +26,8 @@ const Header = () => {
   const { user, signOut } = useAuth() as { user: User | null, signOut: () => void };
   const navigate = useNavigate();
   const [messageCount, setMessageCount] = useState(0);
-  const [unreadCount, setUnreadCount] = useState<number>(() => {
-    if (typeof window === 'undefined') return 0;
-    return parseInt(window.localStorage.getItem('unreadCount') || '0', 10) || 0;
-  });
+  const [unreadCount, setUnreadCount] = useState<number>(0);
+  const [notificationCount, setNotificationCount] = useState<number>(0);
   // Keep last known unread count while user is loading
   const lastUnreadRef = useRef<number>(0);
   useEffect(() => {
@@ -66,15 +64,29 @@ const Header = () => {
         unsubMsgs.push(unsub);
       });
     });
+    // Listen for unread notifications
+    let unsubNotifications: (() => void) | null = null;
+    const notifQ = query(
+      collection(db, 'notifications'),
+      where('userId', '==', userId),
+      where('read', '==', false)
+    );
+    unsubNotifications = onSnapshot(notifQ, (notifSnap) => {
+      setNotificationCount(notifSnap.size);
+    });
     return () => {
       if (unsubConvs) unsubConvs();
       unsubMsgs.forEach(unsub => unsub());
+      if (unsubNotifications) unsubNotifications();
     };
   }, [user]);
 
-  // If user logs out, reset unread count
+  // If user logs out, reset unread count and notification count
   useEffect(() => {
-    if (!user) setUnreadCount(0);
+    if (!user) {
+      setUnreadCount(0);
+      setNotificationCount(0);
+    }
   }, [user]);
 
   useEffect(() => {
@@ -103,26 +115,11 @@ const Header = () => {
         setUnreadCount(v);
       }
     };
-    // Firestore realtime unread listener (updates badge across the app immediately)
-    let unsubFirestore: (() => void) | null = null;
-    if (user && user.email) {
-      try {
-        const q = query(collection(db, 'notifications'), where('userId', '==', user.email || user.email), where('read', '==', false));
-        unsubFirestore = onSnapshot(q, (snap) => {
-          setUnreadCount(snap.size || 0);
-        }, (err) => {
-          // ignore firestore errors here and fallback to localStorage/custom events
-          // console.error('Header notifications snapshot error', err);
-        });
-      } catch (err) {
-        // ignore and fallback
-      }
-    }
+    // Removed notification unread count logic; only chat unread count is used for the message badge.
 
     window.addEventListener('unreadCountUpdated', onUnreadUpdated as EventListener);
     window.addEventListener('storage', onStorage);
     return () => {
-      if (unsubFirestore) unsubFirestore();
       window.removeEventListener('unreadCountUpdated', onUnreadUpdated as EventListener);
       window.removeEventListener('storage', onStorage);
     };
@@ -180,14 +177,11 @@ const Header = () => {
                   className="text-muted-foreground hover:text-foreground relative"
                 >
                   <Bell className="h-4 w-4" />
-                  {(() => {
-                    const count = parseInt((typeof window !== 'undefined' && window.localStorage.getItem('unreadCount')) || '0', 10);
-                    return count > 0 ? (
-                      <div className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] leading-none rounded-full min-w-[14px] h-[14px] px-[3px] flex items-center justify-center">
-                        {count > 9 ? '9+' : count}
-                      </div>
-                    ) : null;
-                  })()}
+                  {notificationCount > 0 && (
+                    <div className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] leading-none rounded-full min-w-[14px] h-[14px] px-[3px] flex items-center justify-center">
+                      {notificationCount > 9 ? '9+' : notificationCount}
+                    </div>
+                  )}
                 </Button>
                 <Button 
                   variant="ghost" 
@@ -197,11 +191,11 @@ const Header = () => {
                   title="Messages"
                 >
                   <MessageSquare className="h-4 w-4" />
-                  {(unreadCount > 0 || (!user && lastUnreadRef.current > 0)) && (
+                  {unreadCount > 0 ? (
                     <div className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] leading-none rounded-full min-w-[14px] h-[14px] px-[3px] flex items-center justify-center">
-                      {user ? (unreadCount > 9 ? '9+' : unreadCount) : (lastUnreadRef.current > 9 ? '9+' : lastUnreadRef.current)}
+                      {unreadCount > 9 ? '9+' : unreadCount}
                     </div>
-                  )}
+                  ) : null}
                 </Button>
               </>
             )}

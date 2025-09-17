@@ -143,8 +143,8 @@ const PostJob = () => {
       }
 
       const jobData = {
-        ...formData,
-        company_name: userData.companyName || "",
+  ...formData,
+  company_name: userData.companyName || userData.fullName || (userData.profile && typeof userData.profile === "object" && userData.profile !== null && "full_name" in userData.profile ? (userData.profile as { full_name?: string }).full_name : "") || "",
         posted_by: user?.id,
         companyId: user?.id,
         salary_min: formData.salary_min ? parseInt(formData.salary_min) : null,

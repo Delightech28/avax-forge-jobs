@@ -34,12 +34,8 @@ interface Job {
   company_name?: string;
   company_id?: string;
   companyId?: string;
-  // companies: {
-  //   id: string;
-  //   name: string;
-  //   logo_url: string;
-  //   location: string;
-  // };
+  company_verification?: 'Elite' | 'Pro' | 'Basic';
+  posted_by?: string;
 }
 
 const Jobs = () => {
@@ -65,8 +61,34 @@ const Jobs = () => {
       if (experienceLevel && experienceLevel !== 'all') filters.push(where('experience_level', '==', experienceLevel));
       const qy = filters.length ? query(jobsCol, ...filters) : query(jobsCol);
       const snap = await getDocs(qy);
-      const list = snap.docs.map((d) => {
+      const list = await Promise.all(snap.docs.map(async (d) => {
         const j = d.data() as Job;
+        let company_verification: 'Elite' | 'Pro' | 'Basic' = 'Basic';
+        let company_name = j.company_name || undefined;
+        if (j.companyId || j.company_id) {
+          try {
+            const companyDocId = j.companyId || j.company_id;
+            const companyRef = doc(db, 'companies', companyDocId);
+            const companySnap = await getDoc(companyRef);
+            if (companySnap.exists()) {
+              const companyData = companySnap.data();
+              if (companyData.name) company_name = companyData.name;
+              if (companyData.companyName) company_name = companyData.companyName;
+              if (companyData.verification === 'Elite') company_verification = 'Elite';
+              else if (companyData.verification === 'Pro') company_verification = 'Pro';
+            } else {
+              // If no company doc, try users collection for fullName
+              const userRef = doc(db, 'users', companyDocId);
+              const userSnap = await getDoc(userRef);
+              if (userSnap.exists()) {
+                const userData = userSnap.data();
+                if (userData.fullName) company_name = userData.fullName;
+              }
+            }
+          } catch {
+            // Suppress error if company/user document is missing or inaccessible
+          }
+        }
         return {
           id: d.id,
           title: j.title,
@@ -84,18 +106,35 @@ const Jobs = () => {
           requires_wallet: j.requires_wallet,
           created_at: j.created_at,
           expires_at: j.expires_at,
-          company_name: j.company_name || undefined,
+          company_name,
+          company_verification,
+          companyId: j.companyId || j.company_id || j.posted_by || null,
         } as Job;
-      });
+      }));
       const now = Date.now();
       const notExpired = list.filter((j) => !j.expires_at || new Date(j.expires_at).getTime() > now);
-      const filtered = searchTerm
+      let filtered = searchTerm
         ? notExpired.filter((j) =>
             [j.title, j.description, j.location, j.company_name]
               .filter(Boolean)
               .some((t: string | undefined) => String(t).toLowerCase().includes(searchTerm.toLowerCase()))
           )
         : notExpired;
+      // Sorting logic for job seekers
+      if (user && (user.verified === 'ProMonthly' || user.verified === 'EliteMonthly' || user.verified === 'ProAnnual' || user.verified === 'EliteAnnual')) {
+        // Verified job seeker: Elite > Pro > Basic
+        filtered = [
+          ...filtered.filter(j => j.company_verification === 'Elite'),
+          ...filtered.filter(j => j.company_verification === 'Pro'),
+          ...filtered.filter(j => j.company_verification === 'Basic'),
+        ];
+      } else {
+        // Basic job seeker: shuffle all
+        for (let i = filtered.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [filtered[i], filtered[j]] = [filtered[j], filtered[i]];
+        }
+      }
       setJobs(filtered);
     } catch (error) {
       console.error("Error fetching jobs:", error);
@@ -107,7 +146,7 @@ const Jobs = () => {
     } finally {
       setLoading(false);
     }
-  }, [jobType, locationType, experienceLevel, searchTerm]);
+  }, [jobType, locationType, experienceLevel, searchTerm, user]);
 
   // Fetch saved jobs (must be declared before use in useEffect)
   const fetchSavedJobs = useCallback(async () => {
@@ -315,15 +354,14 @@ const Jobs = () => {
                   id: job.id,
                   title: job.title,
                   company: job.company_name || "",
-                  companyId: job.company_id || job.companyId || null,
+                  companyId: job.companyId || job.company_id || job.posted_by || null,
                   location: job.location,
                   type: job.job_type.replace("_", " "),
                   salary: formatSalary(job.salary_min, job.salary_max, job.salary_currency),
                   postedAt: formatPostedAt(job.created_at),
-                  isVerified: true,
+                  isVerified: job.company_verification === 'Elite' || job.company_verification === 'Pro',
                   tags: job.skills || [],
                   description: job.description,
-                 // logo_url: job.companies?.logo_url,
                 }}
               />
             ))

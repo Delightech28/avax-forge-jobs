@@ -309,7 +309,7 @@ const Profile = () => {
                   <AvatarImage src={profileData.avatar} />
                   <AvatarFallback className="text-2xl">
                     {user.role === 'company'
-                      ? (profileData.companyName?.charAt(0) || 'C')
+                      ? ((profileData.companyName || profileData.fullName || 'C').charAt(0))
                       : (profileData.fullName?.charAt(0) || user.fullName?.charAt(0) || user.email?.charAt(0) || 'A')}
                   </AvatarFallback>
                 </Avatar>
@@ -318,7 +318,7 @@ const Profile = () => {
                 <div className="flex items-center gap-3 mb-2">
                   <h1 className="text-3xl font-bold flex items-center gap-2">
                     {user.role === 'company'
-                      ? <>{profileData.companyName || 'Avax Forge Jobs'}{' '}
+                      ? <>{profileData.companyName || profileData.fullName || 'Avax Forge Jobs'}
                           {subscribed && expirationDate ? (
                             <span
                               className="flex items-center gap-1 border border-blue-600 rounded-full px-3 py-1 bg-blue-50 cursor-pointer"
@@ -552,7 +552,7 @@ const Profile = () => {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                       <div>
                         <p className="text-muted-foreground">Company Name</p>
-                        <p className="font-medium">{profileData.companyName || 'Not set'}</p>
+                        <p className="font-medium">{profileData.companyName || profileData.fullName || 'Not set'}</p>
                       </div>
                       <div>
                         <p className="text-muted-foreground">Industry & Focus</p>
@@ -896,10 +896,7 @@ const Profile = () => {
                       <span className="text-sm">Profile Complete</span>
                       <Badge variant="default">{calculateProfileCompletion()}%</Badge>
                     </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm">Applications</span>
-                      <span className="text-sm font-medium">{applicationsCount}</span>
-                    </div>
+                    {/* Applications count removed for company profile */}
                   </CardContent>
                 </Card>
                 {/* Subscription Status */}
