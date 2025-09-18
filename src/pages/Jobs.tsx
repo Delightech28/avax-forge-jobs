@@ -68,27 +68,24 @@ const Jobs = () => {
         if (j.companyId || j.company_id) {
           try {
             const companyDocId = j.companyId || j.company_id;
-            const companyRef = doc(db, 'companies', companyDocId);
-            const companySnap = await getDoc(companyRef);
-            if (companySnap.exists()) {
-              const companyData = companySnap.data();
-              if (companyData.name) company_name = companyData.name;
-              if (companyData.companyName) company_name = companyData.companyName;
-              if (companyData.verification === 'Elite') company_verification = 'Elite';
-              else if (companyData.verification === 'Pro') company_verification = 'Pro';
-            } else {
-              // If no company doc, try users collection for fullName
-              const userRef = doc(db, 'users', companyDocId);
-              const userSnap = await getDoc(userRef);
-              if (userSnap.exists()) {
-                const userData = userSnap.data();
-                if (userData.fullName) company_name = userData.fullName;
+            // Only check users collection, since both companies and users are stored there
+            const userRef = doc(db, 'users', companyDocId);
+            const userSnap = await getDoc(userRef);
+            if (userSnap.exists()) {
+              const userData = userSnap.data();
+              if (userData.fullName) company_name = userData.fullName;
+              // Map all Pro/Elite variants to 'Pro' or 'Elite'
+              if (typeof userData.verified === 'string') {
+                if (userData.verified.startsWith('Elite')) company_verification = 'Elite';
+                else if (userData.verified.startsWith('Pro')) company_verification = 'Pro';
               }
             }
           } catch {
-            // Suppress error if company/user document is missing or inaccessible
+            // Suppress error if user document is missing or inaccessible
           }
         }
+        // Guarantee company_verification is always set
+        if (!company_verification) company_verification = 'Basic';
         return {
           id: d.id,
           title: j.title,
@@ -111,6 +108,8 @@ const Jobs = () => {
           companyId: j.companyId || j.company_id || j.posted_by || null,
         } as Job;
       }));
+      // Debug: log all company_verification values
+      console.log('Job company_verification values:', list.map(j => ({ id: j.id, company_verification: j.company_verification })));
       const now = Date.now();
       const notExpired = list.filter((j) => !j.expires_at || new Date(j.expires_at).getTime() > now);
       let filtered = searchTerm
@@ -122,11 +121,12 @@ const Jobs = () => {
         : notExpired;
       // Sorting logic for job seekers
       if (user && (user.verified === 'ProMonthly' || user.verified === 'EliteMonthly' || user.verified === 'ProAnnual' || user.verified === 'EliteAnnual')) {
-        // Verified job seeker: Elite > Pro > Basic
+        // Verified job seeker: Elite > Pro > Basic, each group sorted by created_at descending
+        const sortByDate = (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
         filtered = [
-          ...filtered.filter(j => j.company_verification === 'Elite'),
-          ...filtered.filter(j => j.company_verification === 'Pro'),
-          ...filtered.filter(j => j.company_verification === 'Basic'),
+          ...filtered.filter(j => j.company_verification === 'Elite').sort(sortByDate),
+          ...filtered.filter(j => j.company_verification === 'Pro').sort(sortByDate),
+          ...filtered.filter(j => j.company_verification === 'Basic').sort(sortByDate),
         ];
       } else {
         // Basic job seeker: shuffle all

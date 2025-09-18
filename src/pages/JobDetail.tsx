@@ -93,8 +93,6 @@ const JobDetail = () => {
         skills: j.skills || [],
         requirements: j.requirements || '',
         benefits: j.benefits || '',
-  // ...removed token compensation...
-  // ...removed token amount...
         requires_wallet: j.requires_wallet,
         created_at: j.created_at,
         expires_at: j.expires_at,
@@ -108,6 +106,9 @@ const JobDetail = () => {
           size_range: "",
           industry: ""
         },
+        companyId: j.companyId,
+        // company_id: j.company_id, // Removed because not in JobDetail interface
+        // posted_by: j.posted_by,   // Remove or add to interface if needed
       });
     } catch (error) {
       console.error("Error fetching job:", error);
@@ -123,9 +124,19 @@ const JobDetail = () => {
   }, [id, navigate, user?.role]);
 
   const checkApplicationStatus = useCallback(async () => {
-    // Implement if you add applications subcollection in Firestore
-    return;
-  }, []);
+    if (!user || !id) return;
+    try {
+      const appRef = doc(db, 'users', user.id, 'applied_jobs', id);
+      const appSnap = await getDoc(appRef);
+      if (appSnap.exists()) {
+        setHasApplied(true);
+      } else {
+        setHasApplied(false);
+      }
+    } catch (err) {
+      setHasApplied(false);
+    }
+  }, [id, user]);
 
   useEffect(() => {
     if (id) {
@@ -176,20 +187,32 @@ const JobDetail = () => {
       });
       // Send in-app notification to company
       const companyId = job.companyId || (job.companies && job.companies.id);
+      console.log('[Apply] companyId for notification (companyId|company_id|posted_by|companies.id):', companyId);
       if (companyId) {
-        await setDoc(doc(collection(db, 'notifications')), {
-          userId: companyId,
-          type: 'job_application',
-          jobId: job.id,
-          applicantId: user.id,
-          createdAt: Timestamp.now(),
-          message: `You have a new application for your job: ${job.title}`,
-          read: false,
-        });
+        try {
+          await setDoc(doc(collection(db, 'notifications')), {
+            userId: companyId,
+            type: 'job_application',
+            category: 'job_application',
+            jobId: job.id,
+            applicantId: user.id,
+            createdAt: Timestamp.now(),
+            message: `You have a new application for your job: ${job.title}`,
+            read: false,
+          });
+          console.log('[Apply] Notification written for userId:', companyId);
+        } catch (notifErr) {
+          console.error('[Apply] Error writing notification:', notifErr);
+        }
+      } else {
+        console.warn('[Apply] No companyId found for notification.');
       }
       setHasApplied(true);
+      // Re-check application status from Firestore to ensure UI stays correct after refresh
+      await checkApplicationStatus();
       toast.success('Application submitted successfully!');
     } catch (error: unknown) {
+      console.error('[Apply] Error submitting application:', error);
       toast.error('Failed to submit application');
     } finally {
       setApplying(false);

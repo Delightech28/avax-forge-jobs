@@ -331,9 +331,11 @@ const Messages = () => {
                   </CardContent>
                 </>
               ) : (
-                <div className="flex flex-col items-center justify-center h-full py-24">
+                <div className="flex flex-col items-center justify-center h-full py-24 px-4 sm:px-0">
                   <MessageSquare className="h-10 w-10 mb-4 text-muted-foreground" />
-                  <p className="text-lg text-muted-foreground">Select a conversation or click <b>Send Message</b> on a user profile to start chatting.</p>
+                  <p className="text-lg text-muted-foreground text-center mx-auto" style={{maxWidth: 400}}>
+                    Select a conversation or click <b>Send Message</b> on a user profile to start chatting.
+                  </p>
                 </div>
               )}
             </Card>

@@ -270,7 +270,7 @@ const Notifications = () => {
               <div className="flex flex-wrap gap-2">
                 {categories.map(cat => (
                   <button
-                    key={cat}
+                    key={cat || `empty-${String(cat)}`}
                     onClick={() => setFilter(cat)}
                     className={`px-4 py-2 rounded-full border transition-colors ${
                       filter === cat
@@ -278,7 +278,7 @@ const Notifications = () => {
                         : 'border-primary/30 text-foreground/70 hover:bg-primary/10 hover:border-primary/50'
                     }`}
                   >
-                    {cat.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                    {typeof cat === 'string' ? cat.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) : ''}
                   </button>
                 ))}
               </div>
@@ -403,7 +403,7 @@ const Notifications = () => {
                 }
                 // Also check top-level user fields when an AuthUser is passed
                 if (typeof user !== 'undefined' && user) {
-                  const uu: any = user;
+                  const uu: UserWithRole & { isVerified?: boolean; is_verified?: boolean; verified?: boolean | string; verifiedLevel?: string; verified_plan?: string } = user;
                   if (uu.isVerified === true || uu.is_verified === true) return true;
                   if (uu.verified === true) return true;
                   if (typeof uu.verified === 'string' && verifiedPlans.includes(uu.verified)) return true;

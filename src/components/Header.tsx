@@ -26,13 +26,8 @@ const Header = () => {
   const { user, signOut } = useAuth() as { user: User | null, signOut: () => void };
   const navigate = useNavigate();
   const [messageCount, setMessageCount] = useState(0);
-  const [unreadCount, setUnreadCount] = useState<number>(0);
   const [notificationCount, setNotificationCount] = useState<number>(0);
-  // Keep last known unread count while user is loading
-  const lastUnreadRef = useRef<number>(0);
-  useEffect(() => {
-    if (unreadCount > 0) lastUnreadRef.current = unreadCount;
-  }, [unreadCount]);
+
 
 
   // Listen for unread chat messages in all conversations
@@ -59,7 +54,7 @@ const Header = () => {
           const unread = msgSnap.docs.filter(doc => doc.data().sender !== userId).length;
           unreadMap[convId] = unread;
           const sum = Object.values(unreadMap).reduce((a, b) => (typeof a === 'number' ? a : 0) + (typeof b === 'number' ? b : 0), 0);
-          setUnreadCount(sum);
+          setMessageCount(sum);
         });
         unsubMsgs.push(unsub);
       });
@@ -81,49 +76,9 @@ const Header = () => {
     };
   }, [user]);
 
-  // If user logs out, reset unread count and notification count
-  useEffect(() => {
-    if (!user) {
-      setUnreadCount(0);
-      setNotificationCount(0);
-    }
-  }, [user]);
 
-  useEffect(() => {
-    // Listen for notifications updates via Firestore realtime listener, custom event, or storage events
-    const onUnreadUpdated = (e: Event) => {
-      try {
-        // CustomEvent detail
-        const ce = e as CustomEvent<number>;
-        if (ce && typeof ce.detail === 'number') {
-          setUnreadCount(ce.detail);
-          return;
-        }
-      } catch (err) {
-        console.warn('Header unreadCount event handler error', err);
-      }
-      // Fallback to reading localStorage
-      if (typeof window !== 'undefined') {
-        const v = parseInt(window.localStorage.getItem('unreadCount') || '0', 10) || 0;
-        setUnreadCount(v);
-      }
-    };
 
-    const onStorage = (e: StorageEvent) => {
-      if (e.key === 'unreadCount') {
-        const v = parseInt(e.newValue || '0', 10) || 0;
-        setUnreadCount(v);
-      }
-    };
-    // Removed notification unread count logic; only chat unread count is used for the message badge.
 
-    window.addEventListener('unreadCountUpdated', onUnreadUpdated as EventListener);
-    window.addEventListener('storage', onStorage);
-    return () => {
-      window.removeEventListener('unreadCountUpdated', onUnreadUpdated as EventListener);
-      window.removeEventListener('storage', onStorage);
-    };
-  }, [user]);
 
   const handleAuthAction = () => {
     if (user) {
@@ -191,9 +146,9 @@ const Header = () => {
                   title="Messages"
                 >
                   <MessageSquare className="h-4 w-4" />
-                  {unreadCount > 0 ? (
+                  {messageCount > 0 ? (
                     <div className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] leading-none rounded-full min-w-[14px] h-[14px] px-[3px] flex items-center justify-center">
-                      {unreadCount > 9 ? '9+' : unreadCount}
+                      {messageCount > 9 ? '9+' : messageCount}
                     </div>
                   ) : null}
                 </Button>
