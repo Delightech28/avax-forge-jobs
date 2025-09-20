@@ -4,6 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { db } from '@/integrations/firebase/client';
 import { doc, getDoc, onSnapshot, collection, query, where, getDocs, updateDoc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
+import { WalletSelectModal } from '@/components/ui/wallet-select-modal';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
@@ -99,6 +100,7 @@ const Profile = () => {
   const [applicationsCount, setApplicationsCount] = useState<number>(0);
   const [walletJustConnected, setWalletJustConnected] = useState(false);
   const [walletError, setWalletError] = useState<string | null>(null);
+  const [walletModalOpen, setWalletModalOpen] = useState(false);
 
   // Always fetch walletAddress from Firestore on mount and when user changes
   useEffect(() => {
@@ -845,36 +847,54 @@ const Profile = () => {
                         <Button
                           className="w-full flex items-center justify-center gap-2"
                           variant="default"
-                          onClick={async () => {
-                            setWalletError(null);
-                            if (!window.ethereum) {
-                              setWalletError('MetaMask is not installed.');
-                              toast.error('MetaMask is not installed.');
-                              return;
-                            }
-                            try {
-                              // Only request accounts when user clicks, not on mount
-                              const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-                              const address = accounts[0];
-                              if (!address) throw new Error('No account found');
-                              setProfileData(prev => ({ ...prev, walletAddress: address }));
-                              setWalletJustConnected(true);
-                              if (user && user.id) {
-                                const userRef = doc(db, 'users', user.id);
-                                await import('firebase/firestore').then(firestore =>
-                                  firestore.updateDoc(userRef, { walletAddress: address })
-                                );
-                              }
-                              toast.success('Wallet connected!');
-                            } catch (err) {
-                              setWalletError('Failed to connect wallet. Please try again.');
-                              toast.error('Failed to connect wallet.');
-                            }
-                          }}
+                          onClick={() => setWalletModalOpen(true)}
                         >
                           <Wallet className="h-4 w-4" />
                           Connect Wallet
                         </Button>
+                        <WalletSelectModal
+                          open={walletModalOpen}
+                          onSelect={async (wallet) => {
+                            setWalletModalOpen(false);
+                            setWalletError(null);
+                            let provider = null;
+                            if (wallet === "metamask" && window.ethereum && window.ethereum.isMetaMask) {
+                              provider = window.ethereum;
+                            } else if (wallet === "core" && window.avalanche) {
+                              provider = window.avalanche;
+                            } else if (
+                              wallet === "core" &&
+                              window.ethereum &&
+                              window.ethereum.isMetaMask === false &&
+                              'isCoinbaseWallet' in window.ethereum && window.ethereum.isCoinbaseWallet === false
+                            ) {
+                              provider = window.ethereum;
+                            } else {
+                              setWalletError("Selected wallet not found. Please install it and try again.");
+                              toast.error("Selected wallet not found. Please install it and try again.");
+                              return;
+                            }
+                            try {
+                              // Only request accounts when user clicks, not on mount
+                              const accounts = await provider.request({ method: "eth_requestAccounts" });
+                              const address = accounts[0];
+                              if (!address) throw new Error("No account found");
+                              setProfileData(prev => ({ ...prev, walletAddress: address }));
+                              setWalletJustConnected(true);
+                              if (user && user.id) {
+                                const userRef = doc(db, "users", user.id);
+                                await import("firebase/firestore").then(firestore =>
+                                  firestore.updateDoc(userRef, { walletAddress: address })
+                                );
+                              }
+                              toast.success("Wallet connected!");
+                            } catch (err) {
+                              setWalletError("Failed to connect wallet. Please try again.");
+                              toast.error("Failed to connect wallet.");
+                            }
+                          }}
+                          onClose={() => setWalletModalOpen(false)}
+                        />
                         {walletError && (
                           <div className="mt-2 text-xs text-red-600 text-center">{walletError}</div>
                         )}

@@ -24,51 +24,51 @@ export function useJobPayment() {
   const [error, setError] = useState("");
   const [txHash, setTxHash] = useState("");
 
-  async function payAndPostJob({ verifiedLevel, jobData }) {
+  async function payAndPostJob({ verifiedLevel, jobData, provider }) {
     setLoading(true);
     setError("");
     setTxHash("");
     try {
-      if (!window.ethereum) throw new Error("MetaMask is required");
-      await window.ethereum.request({ method: "eth_requestAccounts" });
-
+      if (!provider) throw new Error("No wallet provider found");
+      // Request accounts
+      if (provider.request) {
+        await provider.request({ method: "eth_requestAccounts" });
+      }
       // Check network
-      const network = await window.ethereum.request({ method: "eth_chainId" });
-      // Fuji testnet chainId is 0xa869 (43113)
+      let network = null;
+      if (provider.request) {
+        network = await provider.request({ method: "eth_chainId" });
+      } else if (provider.chainId) {
+        network = provider.chainId;
+      }
       if (network !== "0xa869") {
         throw new Error("Please switch your wallet to Avalanche Fuji (Testnet) network.");
       }
-
-      const provider = new ethers.BrowserProvider(window.ethereum);
-      const signer = await provider.getSigner();
+      const ethersProvider = new ethers.BrowserProvider(provider);
+      const signer = await ethersProvider.getSigner();
       const contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);
-
-  // Fetch AVAX-native price from contract
-  let requiredAvax = 0n;
-  if (verifiedLevel === "Basic") requiredAvax = await contract.priceBasic();
-  else if (verifiedLevel === "Pro Monthly") requiredAvax = await contract.priceProMonthly();
-  else if (verifiedLevel === "Elite Monthly") requiredAvax = await contract.priceEliteMonthly();
-  // For annual, check unlimited mapping (optional, or set requiredAvax = 0n)
-
-  // Send transaction
-  const tx = await contract.postJob(verifiedLevel, { value: requiredAvax });
-  await tx.wait();
-  setTxHash(tx.hash);
-
-  // Post job to Firestore
-  const docRef = await addDoc(collection(db, "jobs"), jobData);
-
-  // Store job post payment in transactions collection
-  await addDoc(collection(db, "transactions"), {
-    userId: jobData.companyId || jobData.posted_by,
-    txHash: tx.hash,
-    amount: requiredAvax.toString(),
-    date: new Date().toISOString(),
-    description: "",
-    type: "job_post",
-  });
-
-  return { txHash: tx.hash, jobId: docRef.id };
+      // Fetch AVAX-native price from contract
+      let requiredAvax = 0n;
+      if (verifiedLevel === "Basic") requiredAvax = await contract.priceBasic();
+      else if (verifiedLevel === "Pro Monthly") requiredAvax = await contract.priceProMonthly();
+      else if (verifiedLevel === "Elite Monthly") requiredAvax = await contract.priceEliteMonthly();
+      // For annual, check unlimited mapping (optional, or set requiredAvax = 0n)
+      // Send transaction
+      const tx = await contract.postJob(verifiedLevel, { value: requiredAvax });
+      await tx.wait();
+      setTxHash(tx.hash);
+      // Post job to Firestore
+      const docRef = await addDoc(collection(db, "jobs"), jobData);
+      // Store job post payment in transactions collection
+      await addDoc(collection(db, "transactions"), {
+        userId: jobData.companyId || jobData.posted_by,
+        txHash: tx.hash,
+        amount: requiredAvax.toString(),
+        date: new Date().toISOString(),
+        description: "",
+        type: "job_post",
+      });
+      return { txHash: tx.hash, jobId: docRef.id };
     } catch (err) {
       setError(err.message || "Payment failed");
       throw err;

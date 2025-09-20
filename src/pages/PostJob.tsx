@@ -1,5 +1,11 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+// Extend Window type for avalanche property
+declare global {
+  interface Window {
+    avalanche?: unknown;
+  }
+}
 // Using Firebase instead of Express API
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -17,6 +23,7 @@ import { db } from '@/integrations/firebase/client';
 import { collection, addDoc, doc as fsDoc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { useJobPayment } from "@/hooks/useJobPayment";
 import { filterSkills } from '@/lib/skills';
+import { WalletSelectModal } from '@/components/ui/wallet-select-modal';
 
 
 
@@ -47,6 +54,49 @@ const PostJob = () => {
   });
 
   const { payAndPostJob, loading: paymentLoading, error: paymentError } = useJobPayment();
+  const [walletModalOpen, setWalletModalOpen] = useState(false);
+  interface PendingJobData {
+    verifiedLevel: string;
+    jobData: Record<string, unknown>;
+    provider?: unknown;
+  }
+  const [pendingJobData, setPendingJobData] = useState<PendingJobData | null>(null);
+  const handleWalletSelect = async (wallet: "metamask" | "core") => {
+    setWalletModalOpen(false);
+    if (!pendingJobData) return;
+    type EthereumProvider = {
+      isMetaMask?: boolean;
+      isAvalanche?: boolean;
+      [key: string]: unknown;
+    };
+    let provider: EthereumProvider | null = null;
+    if (wallet === "metamask" && window.ethereum && window.ethereum.isMetaMask) {
+      provider = window.ethereum;
+    } else if (wallet === "core" && window.avalanche) {
+      provider = window.avalanche as EthereumProvider;
+    } else if (
+      wallet === "core" &&
+      window.ethereum &&
+      (window.ethereum as { isAvalanche?: boolean }).isAvalanche
+    ) {
+      provider = window.ethereum;
+    } else {
+      toast.error("Selected wallet not found. Please install it and try again.");
+      setSubmitting(false);
+      return;
+    }
+    try {
+      const result = await payAndPostJob({ ...pendingJobData, provider });
+      toast.success("Job posted successfully!");
+      navigate(`/jobs/${result.jobId}`, { state: { fromPostJob: true } });
+    } catch (error) {
+      console.error("Error posting job:", error);
+      toast.error(paymentError || "Failed to post job");
+    } finally {
+      setSubmitting(false);
+      setPendingJobData(null);
+    }
+  };
 
   useEffect(() => {
     if (loading) return;
@@ -87,31 +137,24 @@ const PostJob = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     // Enhanced validation
     const errors = [];
-    
     if (!formData.title || !formData.description) {
       errors.push("Please fill in all required fields (title, description)");
     }
-    
     if (skills.length === 0) {
       errors.push("Please add at least one required skill");
     }
-    
     if (!formData.salary_min || !formData.salary_max) {
       errors.push("Please specify both minimum and maximum salary");
     }
-    
     if (!formData.salary_currency) {
       errors.push("Please select a currency");
     }
-    
     if (!formData.token_symbol) {
       errors.push("Please enter a token symbol");
     }
     // Token amount is optional - no validation required
-    
     if (errors.length > 0) {
       toast.error(errors.join(". "));
       return;
@@ -121,12 +164,14 @@ const PostJob = () => {
       // Preflight: ensure authenticated company with users/{uid}.role === 'company'
       if (!user) {
         toast.error('Please sign in to post a job');
+        setSubmitting(false);
         return;
       }
       const userRef = fsDoc(db, 'users', user.id as string);
       const userSnap = await getDoc(userRef);
       if (!userSnap.exists()) {
         toast.error('Your company profile is not initialized. Please sign out and sign in again.');
+        setSubmitting(false);
         return;
       }
       interface UserData {
@@ -139,12 +184,12 @@ const PostJob = () => {
       console.log('[PostJob] preflight', { uid: user.id, roleFromDoc: userData?.role, userDocPath: `users/${user.id}` });
       if (userData.role !== 'company') {
         toast.error('Only verified companies can post jobs.');
+        setSubmitting(false);
         return;
       }
-
       const jobData = {
-  ...formData,
-  company_name: userData.companyName || userData.fullName || (userData.profile && typeof userData.profile === "object" && userData.profile !== null && "full_name" in userData.profile ? (userData.profile as { full_name?: string }).full_name : "") || "",
+        ...formData,
+        company_name: userData.companyName || userData.fullName || (userData.profile && typeof userData.profile === "object" && userData.profile !== null && "full_name" in userData.profile ? (userData.profile as { full_name?: string }).full_name : "") || "",
         posted_by: user?.id,
         companyId: user?.id,
         salary_min: formData.salary_min ? parseInt(formData.salary_min) : null,
@@ -154,18 +199,15 @@ const PostJob = () => {
         created_at: new Date().toISOString(),
         expires_at: formData.expires_at ? new Date(formData.expires_at).toISOString() : null,
       };
-  // Map verification levels to contract values
-  let verifiedLevel = userData.verified || "Basic";
-  if (verifiedLevel === "ProMonthly") verifiedLevel = "Pro Monthly";
-  else if (verifiedLevel === "EliteMonthly") verifiedLevel = "Elite Monthly";
-  // Do not convert EliteAnnual
-  const result = await payAndPostJob({ verifiedLevel, jobData });
-      toast.success("Job posted successfully!");
-      navigate(`/jobs/${result.jobId}`, { state: { fromPostJob: true } });
+      let verifiedLevel = userData.verified || "Basic";
+      if (verifiedLevel === "ProMonthly") verifiedLevel = "Pro Monthly";
+      else if (verifiedLevel === "EliteMonthly") verifiedLevel = "Elite Monthly";
+      // Do not convert EliteAnnual
+      setPendingJobData({ verifiedLevel, jobData });
+      setWalletModalOpen(true);
     } catch (error) {
-      console.error("Error posting job:", error);
-      toast.error(paymentError || "Failed to post job");
-    } finally {
+      console.error("Error preparing job:", error);
+      toast.error(paymentError || "Failed to prepare job");
       setSubmitting(false);
     }
   };
@@ -563,12 +605,12 @@ const PostJob = () => {
 
             {/* Submit Button */}
             <div className="text-center">
-                             <Button 
-                 type="submit" 
-                 disabled={submitting}
-                 className="w-full max-w-md h-14 text-lg font-semibold"
-                 size="lg"
-               >
+              <Button 
+                type="submit" 
+                disabled={submitting}
+                className="w-full max-w-md h-14 text-lg font-semibold"
+                size="lg"
+              >
                 {submitting ? (
                   <div className="flex items-center gap-2">
                     <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
@@ -584,6 +626,11 @@ const PostJob = () => {
               <p className="text-sm text-muted-foreground mt-2">
                 Your job will be visible to thousands of qualified candidates
               </p>
+              <WalletSelectModal
+                open={walletModalOpen}
+                onSelect={handleWalletSelect}
+                onClose={() => { setWalletModalOpen(false); setSubmitting(false); setPendingJobData(null); }}
+              />
             </div>
           </form>
         </div>

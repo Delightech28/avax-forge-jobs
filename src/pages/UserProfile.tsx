@@ -142,34 +142,36 @@ const UserProfile = () => {
                 </div>
                 <div className='mt-3'>
                 {user.walletAddress && (
-                  <div className="text-xs mt-1 flex items-center gap-2">
-                    Wallet: <span className="font-mono">{user.walletAddress}</span>
-                    <button
-                      type="button"
-                      className="ml-1 p-1 rounded hover:bg-muted transition"
-                      onClick={() => {
-                        navigator.clipboard.writeText(user.walletAddress || '');
-                        setCopied(true);
-                        setTimeout(() => setCopied(false), 2000);
-                      }}
-                      aria-label={copied ? 'Copied!' : 'Copy wallet address'}
+                  <div className="text-xs mt-1 flex flex-col md:flex-row md:items-center gap-2">
+                    <div className="flex items-center gap-2">
+                      Wallet: <span className="font-mono">{user.walletAddress}</span>
+                      <button
+                        type="button"
+                        className="ml-1 p-1 rounded hover:bg-muted transition"
+                        onClick={() => {
+                          navigator.clipboard.writeText(user.walletAddress || '');
+                          setCopied(true);
+                          setTimeout(() => setCopied(false), 2000);
+                        }}
+                        aria-label={copied ? 'Copied!' : 'Copy wallet address'}
+                      >
+                        {copied ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
+                      </button>
+                    </div>
+                    <Button
+                      variant="default"
+                      className="w-full md:w-auto md:ml-4 flex items-center gap-2 shadow-lg"
+                      onClick={() => window.location.href = `/messages?to=${user.id}`}
                     >
-                      {copied ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
-                    </button>
+                      <MessageCircle className="h-4 w-4" />
+                      Send Message
+                    </Button>
                   </div>
                 )}
               </div>
               </div>
             </div>
-            {/* Send Message Button - bottom right */}
-            <Button
-              variant="default"
-              className="absolute bottom-4 right-4 flex items-center gap-2 shadow-lg"
-              onClick={() => window.location.href = `/messages?to=${user.id}`}
-            >
-              <MessageCircle className="h-4 w-4" />
-              Send Message
-            </Button>
+            {/* Send Message Button moved under wallet address for mobile view */}
           </CardContent>
         </Card>
         <div className="space-y-6">
