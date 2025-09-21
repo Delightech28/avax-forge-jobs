@@ -8,9 +8,11 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { Wallet, User, Mail, Lock, UserPlus, Briefcase } from 'lucide-react';
+import { Eye, EyeOff } from 'lucide-react';
 import { getAuth, sendPasswordResetEmail } from 'firebase/auth';
 
 const Auth = () => {
+  const [showPassword, setShowPassword] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -344,20 +346,29 @@ const Auth = () => {
                     <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                     <Input
                       id="password"
-                      type="password"
+                      type={showPassword ? "text" : "password"}
                       placeholder="••••••••"
                       value={password}
                       onChange={handlePasswordChange}
-                      className="pl-10"
+                      className="pl-10 pr-10"
                       required
                       minLength={8}
                     />
+                    <button
+                      type="button"
+                      className="absolute right-3 top-3 h-5 w-5 text-muted-foreground focus:outline-none"
+                      tabIndex={-1}
+                      onClick={() => setShowPassword((v) => !v)}
+                      aria-label={showPassword ? "Hide password" : "Show password"}
+                    >
+                      {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                    </button>
                   </div>
                   {isSignUp && (
                     <div className="text-xs space-y-1">
                       <p className="font-medium">Password must contain:</p>
                       <ul className="space-y-0.5">
-                        <li className={`flex items-center gap-2 ${passwordChecks.length ? 'text-green-600' : 'text-red-500'}`}>
+                        <li className={`flex items-center gap-2 ${passwordChecks.length ? 'text-green-600' : 'text-red-500'}`}> 
                           <span className={`w-2 h-2 rounded-full ${passwordChecks.length ? 'bg-green-500' : 'bg-red-500'}`}></span>
                           At least 8 characters
                         </li>

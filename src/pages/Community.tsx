@@ -21,6 +21,7 @@ function formatDate(dateStr: string): string {
 }
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useState, useEffect } from "react";
+  // (moved hook into component below)
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Plus } from "lucide-react";
@@ -66,8 +67,37 @@ type CommunityPost = {
 };
 
 export const Community = () => {
-  const { user } = useAuth();
+  // Dynamic badges mapping: fetched from Firestore
+  const [authorBadges, setAuthorBadges] = useState<Record<string, 'verified' | 'company' | null>>({});
+
   const [posts, setPosts] = useState<CommunityPost[]>([]);
+  useEffect(() => {
+    const fetchBadges = async () => {
+      const userIds = Array.from(new Set(posts.map(p => p.userId).filter(Boolean)));
+      const badgeMap: Record<string, 'verified' | 'company' | null> = {};
+      for (const userId of userIds) {
+        try {
+          const userDocRef = doc(db, 'users', userId);
+          const userDocSnap = await getDoc(userDocRef);
+          if (userDocSnap.exists()) {
+            const data = userDocSnap.data();
+            if (data.verified && data.verified !== 'Basic') {
+              badgeMap[userId] = 'verified';
+            } else if (data.role === 'company') {
+              badgeMap[userId] = 'company';
+            } else {
+              badgeMap[userId] = null;
+            }
+          }
+        } catch {
+          // Ignore errors fetching user badge
+        }
+      }
+      setAuthorBadges(badgeMap);
+    };
+    if (posts.length > 0) fetchBadges();
+  }, [posts]);
+  const { user } = useAuth();
   // Track liked post IDs for current user (local only)
   const [likedPosts, setLikedPosts] = useState<string[]>([]);
   const [showLikeEmoji, setShowLikeEmoji] = useState<{[key: string]: boolean}>({});
@@ -86,30 +116,29 @@ export const Community = () => {
       try {
         const q = query(collection(db, "community_posts"), orderBy("createdAt", "desc"));
         const snap = await getDocs(q);
-        const realPosts = snap.docs.map(docSnap => {
-          const data = docSnap.data();
-          return {
-            id: docSnap.id,
-            author: data.author || "Unknown",
-            userId: data.userId || "",
-            avatar: data.avatar || "",
-            content: data.content || "",
-            createdAt: data.createdAt
-              ? (typeof data.createdAt === "string"
-                  ? data.createdAt
-                  : data.createdAt.toDate().toLocaleString())
-              : "",
-            likes: typeof data.likes === "number" ? data.likes : 0,
-            likedBy: Array.isArray(data.likedBy) ? data.likedBy : [],
-            replies: Array.isArray(data.replies) ? data.replies : [],
-          };
-        });
-        setPosts(shuffleArray(realPosts));
-      } catch {
-        setPosts([]);
-      } finally {
-        setLoading(false);
-      }
+  const realPosts = snap.docs.map(docSnap => {
+    const data = docSnap.data();
+    return {
+      id: docSnap.id,
+      author: data.author || "Unknown",
+      userId: data.userId || "",
+      avatar: data.avatar || "",
+      content: data.content || "",
+      createdAt: data.createdAt
+        ? (typeof data.createdAt === "string"
+            ? data.createdAt
+            : data.createdAt.toDate().toLocaleString())
+        : "",
+      likes: typeof data.likes === "number" ? data.likes : 0,
+      replies: Array.isArray(data.replies) ? data.replies : [],
+    };
+  });
+  setPosts(realPosts);
+} catch (err) {
+  // Optionally handle error
+} finally {
+  setLoading(false);
+}
     };
     fetchPosts();
   }, []);
@@ -348,7 +377,27 @@ export const Community = () => {
                               <AvatarFallback>{post.author?.charAt(0) || '?'}</AvatarFallback>
                             </Avatar>
                             <div className="flex flex-col flex-1">
-                              <span className="font-semibold text-left">{post.author}</span>
+                              <span className="font-semibold text-left flex items-center gap-2">
+                                {post.author}
+                                {authorBadges[post.userId] === 'verified' && (
+                                  <span className="flex items-center gap-1 border border-blue-600 rounded-full px-2 py-0.5 bg-blue-50 ml-1" title="Verified">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="#2563eb" className="w-3 h-3">
+                                      <circle cx="12" cy="12" r="10" stroke="#2563eb" strokeWidth="2" fill="#fff" />
+                                      <path strokeLinecap="round" strokeLinejoin="round" stroke="#2563eb" strokeWidth="2" d="M9 12l2 2 4-4" />
+                                    </svg>
+                                    <span className="text-blue-600 font-medium text-xs">Verified</span>
+                                  </span>
+                                )}
+                                {authorBadges[post.userId] === 'company' && (
+                                  <span className="flex items-center gap-1 border border-blue-600 rounded-full px-2 py-0.5 bg-blue-50 ml-1" title="Company">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="#2563eb" className="w-3 h-3">
+                                      <circle cx="12" cy="12" r="10" stroke="#2563eb" strokeWidth="2" fill="#fff" />
+                                      <path strokeLinecap="round" strokeLinejoin="round" stroke="#2563eb" strokeWidth="2" d="M9 12l2 2 4-4" />
+                                    </svg>
+                                    <span className="text-blue-600 font-medium text-xs">Verified</span>
+                                  </span>
+                                )}
+                              </span>
                               <div className="text-foreground/80 mb-2 mt-1">{post.content}</div>
                               <div className="flex justify-between items-center mt-2">
                                 <div className="flex gap-4 items-center relative">
