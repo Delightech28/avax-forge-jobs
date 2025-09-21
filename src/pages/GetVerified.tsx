@@ -37,22 +37,22 @@ const tiers = [
 		cta: "Subscribe & Go Pro",
 		disabled: false,
 	},
-		{
-			name: "Elite Plan",
-			price: "$25 / month",
-			features: [
-				"Everything in Pro",
-				"One-on-One career opportunities.",
-				"AI career roadmap & skill building plan",
-				"Exclusive networking event & webinars",
-				"Access to freelance gigs & remote-only premium jobs.",
-				"Top tier visibility in employer search results.",
-				"VIP Community forum access (Private group with experts & recruiters)",
-			],
-		highlight: false,
-		cta: "Upgrade to Elite",
-		disabled: false,
-	},
+			// {
+			//    name: "Elite Plan",
+			//    price: "$25 / month",
+			//    features: [
+			//       "Everything in Pro",
+			//       "One-on-One career opportunities.",
+			//       "AI career roadmap & skill building plan",
+			//       "Exclusive networking event & webinars",
+			//       "Access to freelance gigs & remote-only premium jobs.",
+			//       "Top tier visibility in employer search results.",
+			//       "VIP Community forum access (Private group with experts & recruiters)",
+			//    ],
+			//    highlight: false,
+			//    cta: "Upgrade to Elite",
+			//    disabled: false,
+			// },
 ];
 
 // Company tiers
@@ -338,9 +338,9 @@ const GetVerified = () => {
 												isBasic ? "cursor-default" : "cursor-pointer"
 											}
 											transition-all duration-300
-											${tierList[realIdx].highlight && selected === null ? "border-red-500 scale-105" : ""}
-											${isSelected ? "md:border-red-500 md:scale-105" : "md:border-slate-700 md:scale-100"}
-											${!isSelected && !tierList[realIdx].highlight && selected !== null ? "md:border-slate-700 md:scale-100" : ""}
+											${tierList[realIdx].highlight && selected === null ? "border-red-500" : ""}
+											${isSelected ? "md:border-red-500" : "md:border-slate-700"}
+											${!isSelected && !tierList[realIdx].highlight && selected !== null ? "md:border-slate-700" : ""}
 											`}
 											style={{ outline: "none" }}
 										>
