@@ -30,9 +30,163 @@ import {
 import { toast } from 'sonner';
 import Header from '@/components/Header';
 import { useSubscription } from '@/hooks/useSubscription';
+import jsPDF from 'jspdf';
+// ...existing code...
 
 // ...existing code...
 const Profile = () => {
+  // Helper to generate and download a styled CV PDF
+  const handleDownloadCV = () => {
+    const doc = new jsPDF();
+    let y = 18;
+    // Header: Name & Contact
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(16);
+    doc.text(profileData.fullName || 'No Name', 14, y);
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    const contactLine = [];
+    if (user?.email) contactLine.push(user.email);
+    if (profileData.contactEmail && profileData.contactEmail !== user?.email) contactLine.push(profileData.contactEmail);
+    if (profileData.location) contactLine.push(profileData.location);
+    if (profileData.website) contactLine.push(profileData.website.replace(/^https?:\/\//, ''));
+    doc.text(contactLine.join(' | '), 14, y + 6);
+    y += 12;
+    doc.setDrawColor(200);
+    doc.line(14, y, 196, y);
+    y += 6;
+
+    // OBJECTIVE
+    doc.setFillColor(230, 230, 230);
+    doc.rect(14, y, 182, 7, 'F');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11);
+    doc.text('OBJECTIVE', 16, y + 5);
+    y += 11;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+    if (profileData.bio) {
+      const bioLines = doc.splitTextToSize(profileData.bio, 178);
+      doc.text(bioLines, 16, y);
+      y += bioLines.length * 5 + 2;
+    }
+
+    // EXPERIENCE
+    doc.setFillColor(230, 230, 230);
+    doc.rect(14, y, 182, 7, 'F');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11);
+    doc.text('EXPERIENCE', 16, y + 5);
+    y += 11;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+    if (profileData.experience && profileData.experience.length > 0) {
+      profileData.experience.forEach((exp) => {
+        doc.setFont('helvetica', 'bold');
+        doc.text(`${exp.title}`, 16, y);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`${exp.company}  ${exp.period}`, 80, y);
+        y += 5;
+        if (exp.description) {
+          const expDesc = doc.splitTextToSize(exp.description, 170);
+          doc.text(expDesc, 18, y);
+          y += expDesc.length * 5 + 1;
+        }
+        y += 2;
+      });
+    }
+
+    // EDUCATION
+    doc.setFillColor(230, 230, 230);
+    doc.rect(14, y, 182, 7, 'F');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11);
+    doc.text('EDUCATION', 16, y + 5);
+    y += 11;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+    if (profileData.education && profileData.education.length > 0) {
+      profileData.education.forEach((edu) => {
+        doc.setFont('helvetica', 'bold');
+        doc.text(`${edu.degree}`, 16, y);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`${edu.school}  ${edu.period}`, 80, y);
+        y += 5;
+        if (edu.description) {
+          const eduDesc = doc.splitTextToSize(edu.description, 170);
+          doc.text(eduDesc, 18, y);
+          y += eduDesc.length * 5 + 1;
+        }
+        y += 2;
+      });
+    }
+
+    // SKILLS
+    doc.setFillColor(230, 230, 230);
+    doc.rect(14, y, 182, 7, 'F');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11);
+    doc.text('SKILLS', 16, y + 5);
+    y += 11;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+    if (profileData.skills && profileData.skills.length > 0) {
+      const skillsText = profileData.skills.join(', ');
+      doc.text(skillsText, 16, y);
+      y += 7;
+    }
+
+    // CERTIFICATIONS
+    if (profileData.certifications && profileData.certifications.length > 0) {
+      doc.setFillColor(230, 230, 230);
+      doc.rect(14, y, 182, 7, 'F');
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(11);
+      doc.text('CERTIFICATIONS', 16, y + 5);
+      y += 11;
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      profileData.certifications.forEach((cert) => {
+        doc.setFont('helvetica', 'bold');
+        doc.text(`${cert.title}`, 16, y);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`${cert.issuer}  ${cert.date || ''}`, 80, y);
+        y += 5;
+        if (cert.description) {
+          const certDesc = doc.splitTextToSize(cert.description, 170);
+          doc.text(certDesc, 18, y);
+          y += certDesc.length * 5 + 1;
+        }
+        y += 2;
+      });
+    }
+
+    // PROJECTS
+    if (profileData.projects && profileData.projects.length > 0) {
+      doc.setFillColor(230, 230, 230);
+      doc.rect(14, y, 182, 7, 'F');
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(11);
+      doc.text('PROJECTS', 16, y + 5);
+      y += 11;
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      profileData.projects.forEach((proj) => {
+        doc.setFont('helvetica', 'bold');
+        doc.text(`${proj.title}`, 16, y);
+        doc.setFont('helvetica', 'normal');
+        if (proj.description) {
+          const projDesc = doc.splitTextToSize(proj.description, 170);
+          doc.text(projDesc, 18, y + 5);
+          y += projDesc.length * 5 + 1;
+        }
+        y += 7;
+      });
+    }
+
+    doc.save('cv.pdf');
+  };
+    // ...removed duplicate/old PDF generation code...
   // Helper to shorten wallet address
   const getShortAddress = (addr: string) => {
     if (!addr || addr.length < 10) return addr;
@@ -65,6 +219,7 @@ const Profile = () => {
     createdAt: null as string | null,
     certifications: [] as Certification[],
     website: '', // Add website property
+    projects: [] as Project[], // Add projects property
   });
   // For avatar upload
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -205,6 +360,10 @@ const Profile = () => {
     credentialUrl?: string;
     description?: string;
   };
+  type Project = {
+    title: string;
+    description: string;
+  };
 
   // Subscription hook integration
   const {
@@ -317,7 +476,7 @@ const Profile = () => {
                 </Avatar>
               </div>
               <div className="flex-1">
-                <div className="flex items-center gap-3 mb-2">
+                <div className="flex items-center gap-3 mb-2 justify-between">
                   <h1 className="text-3xl font-bold flex items-center gap-2">
                     {user.role === 'company'
                       ? <>{profileData.companyName || profileData.fullName || 'Avax Forge Jobs'}
@@ -378,6 +537,8 @@ const Profile = () => {
                         </>
                     }
                   </h1>
+              
+                    {/* Removed duplicate Download CV button for verified users who are not companies */}
                 </div>
                 {user.role === 'company' ? (
                   <>
@@ -488,7 +649,29 @@ const Profile = () => {
                           return 'Recently';
                         })()}
                       </span>
+                      {/* Download CV button for verified users who are not companies */}
+                      {/* Desktop: inline with info row; Mobile: below social icons */}
+                      <div className="hidden md:flex w-full">
+                        {subscribed && expirationDate && (
+                          <Button
+                            variant="outline"
+                            className="flex items-center gap-2 ml-auto bg-transparent text-white border border-white hover:bg-white/10"
+                            type="button"
+                            onClick={handleDownloadCV}
+                          >
+                            <Download className="h-4 w-4 text-white" />
+                            <span className="text-white">Download CV</span>
+                          </Button>
+                        )}
+                      </div>
                     </div>
+                    {/* Social icons row (already present) */}
+                    {((Array.isArray((profileData as unknown as Record<string, unknown>)['websites']) && (((profileData as unknown as Record<string, unknown>)['websites']) as string[]).length > 0) || profileData.website || profileData.twitter || profileData.linkedin || profileData.discord) && (
+                      <div className="flex flex-wrap items-center gap-4 mt-2 md:mt-1">
+                        {/* ...existing social icon rendering code... */}
+                      </div>
+                    )}
+                  
                     {((Array.isArray((profileData as unknown as Record<string, unknown>)['websites']) && (((profileData as unknown as Record<string, unknown>)['websites']) as string[]).length > 0) || profileData.website || profileData.twitter || profileData.linkedin || profileData.discord) && (
                       <div className="flex flex-wrap items-center gap-4 mt-2">
                         {/* Render websites array if present */}
@@ -532,7 +715,20 @@ const Profile = () => {
                   </>
                 )}
               </div>
-              {/* Removed Download CV button for company profile */}
+                {/* Mobile: Download CV button below social icons */}
+                    <div className="flex md:hidden w-full mt-4">
+                      {subscribed && expirationDate && (
+                        <Button
+                          variant="outline"
+                          className="w-full flex items-center justify-center gap-2 bg-transparent text-white border border-white hover:bg-white/10"
+                          type="button"
+                          onClick={handleDownloadCV}
+                        >
+                          <Download className="h-4 w-4 text-white" />
+                          <span className="text-white">Download CV</span>
+                        </Button>
+                      )}
+          </div>
             </div>
           </CardContent>
         </Card>

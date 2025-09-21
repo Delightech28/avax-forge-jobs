@@ -52,6 +52,10 @@ interface User {
   subscriptionStatus?: string;
   subscriptionExpires?: string;
   createdAt?: string | number;
+  website?: string;
+  twitter?: string;
+  linkedin?: string;
+  discord?: string;
 }
 
 const UserProfile = () => {
@@ -140,6 +144,39 @@ const UserProfile = () => {
                     })()}
                   </span>
                 </div>
+                {(user.website || user.twitter || user.linkedin || user.discord) && (
+                  <div className="flex flex-wrap items-center gap-4 mt-2">
+                    {user.website && (
+                      <a href={user.website.startsWith('http') ? user.website : `https://${user.website}`} target="_blank" rel="noreferrer" className="hover:text-primary transition-colors">
+                        <Globe className="h-4 w-4" />
+                      </a>
+                    )}
+                    {user.twitter && (
+                      <a href={user.twitter} target="_blank" rel="noreferrer" className="hover:text-primary transition-colors">
+                        {/* X/Twitter icon */}
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor" aria-label="X">
+                          <path d="M18.244 3H21l-6.58 7.51L22.5 21h-6.73l-4.27-5.18L6 21H3.244l6.97-7.96L1.5 3h6.86l3.86 4.7L18.244 3Zm-1.18 16h1.92L8.98 5h-1.94l10.02 14Z"/>
+                        </svg>
+                      </a>
+                    )}
+                    {user.linkedin && (
+                      <a href={user.linkedin} target="_blank" rel="noreferrer" className="hover:text-primary transition-colors">
+                        {/* LinkedIn icon */}
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor" aria-label="LinkedIn">
+                          <path d="M19 0h-14c-2.76 0-5 2.24-5 5v14c0 2.76 2.24 5 5 5h14c2.76 0 5-2.24 5-5v-14c0-2.76-2.24-5-5-5zm-11 19h-3v-10h3v10zm-1.5-11.25c-.966 0-1.75-.784-1.75-1.75s.784-1.75 1.75-1.75 1.75.784 1.75 1.75-.784 1.75-1.75 1.75zm13.5 11.25h-3v-5.5c0-1.104-.896-2-2-2s-2 .896-2 2v5.5h-3v-10h3v1.354c.417-.646 1.18-1.354 2.083-1.354 1.657 0 3 1.343 3 3v7z"/>
+                        </svg>
+                      </a>
+                    )}
+                    {user.discord && (
+                      <a href={user.discord} target="_blank" rel="noreferrer" className="hover:text-primary transition-colors">
+                        {/* Discord icon */}
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor" aria-label="Discord">
+                          <path d="M20.317 4.369A19.791 19.791 0 0 0 16.885 3.1a.486.486 0 0 0-.518.243c-.211.375-.444.864-.608 1.249a18.524 18.524 0 0 0-5.518 0c-.164-.385-.397-.874-.608-1.249a.486.486 0 0 0-.518-.243c-1.432.326-2.814.812-4.112 1.269A.478.478 0 0 0 2 5.77c-1.1 2.042-1.75 4.29-1.75 6.6 0 7.5 6.5 10.5 12.75 10.5s12.75-3 12.75-10.5c0-2.31-.65-4.558-1.75-6.6a.478.478 0 0 0-.433-.401ZM8.02 15.27c-1.18 0-2.15-1.08-2.15-2.41 0-1.33.96-2.41 2.15-2.41s2.15 1.08 2.15 2.41c0 1.33-.96 2.41-2.15 2.41Zm7.96 0c-1.18 0-2.15-1.08-2.15-2.41 0-1.33.96-2.41 2.15-2.41s2.15 1.08 2.15 2.41c0 1.33-.96 2.41-2.15 2.41Z"/>
+                        </svg>
+                      </a>
+                    )}
+                  </div>
+                )}
                 <div className='mt-3'>
                 {user.walletAddress && (
                   <div className="text-xs mt-1 flex flex-col md:flex-row md:items-center gap-2">
