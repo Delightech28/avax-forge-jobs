@@ -21,7 +21,7 @@ const HelpCenter = () => {
         },
         {
           question: "How do I connect my wallet?",
-          answer: "After signing in, go to your profile page and click 'Connect MetaMask' in the wallet section. Make sure you have MetaMask installed in your browser."
+          answer: "After signing in, go to your profile page and click 'Connect Wallet' in the wallet section. You can choose either MetaMask or Core Wallet. Make sure you have your preferred wallet installed in your browser."
         }
       ]
     },

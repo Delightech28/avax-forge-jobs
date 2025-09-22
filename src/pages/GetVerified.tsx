@@ -61,28 +61,25 @@ const companyTiers = [
 		name: "Basic",
 		price: "Free",
 		features: [
-			"Create a company profile & upload company logo.",
-			"Post 1 job per month (with Avax forge watermark as basic listing & $10 per post)",
-			"Access to applicant tracking (basic)",
-			"View up to 10 candidate profile per month",
-			"Limited analytics (views & applications count)",
+			"3 job postings per month",
+			"Standard visibility on listing",
+			"Limited access to talent pool (general profiles only)",
+			"Community shoutout once per month",
 		],
 		highlight: false,
 		cta: "Current Plan",
 		disabled: true,
 	},
 	{
-		name: "Pro Plan ($10/month)",
+		name: "Pro Plan",
 		price: "$10 / month",
 		features: [
-			"Everything in Basic, plus:",
-			"Post up to 5 jobs per month ($5 per post)",
-			"Featured job placement",
-			"Unlimited candidate profile views",
-			"AI-assisted job description optimization",
-			"Company branding on job post (no watermark)",
-			"Custom company dashboard with analytics",
-			"Access to candidate recommendations powered by AI.",
+			"Unlimited Job posting",
+			"Priority/featured visibility on listings",
+			"Direct access to full talent pool with advanced filters (skills, experience, availability)",
+			"Project spotlight in the Avax Tribe Community (Twitter + Space)",
+			"2x monthly promotion across community channels",
+			"Analytics: views, applications, manage jobs",
 		],
 		highlight: true,
 		cta: "Subscribe & Go Pro",
@@ -91,16 +88,7 @@ const companyTiers = [
 	{
 		name: "Elite Plan ($50/month)",
 		price: "$50 / month",
-		features: [
-			"Everything in Pro, plus:",
-			"Post up to 10 jobs per month ($3 per post)",
-			"Dedicated account manager (human support)",
-			"Priority visibility across the platform (top listing)",
-			"Access to premium candidate first (early access)",
-			"Advanced analytics & insights (conversion rates, best times to post)",
-			"Invite-only networking sessions with top talent & other companies",
-			"Employer branding boost (logo in featured section & newsletter)",
-		],
+		features: [], 
 		highlight: false,
 		cta: "Upgrade to Elite",
 		disabled: false,
@@ -149,10 +137,11 @@ const GetVerified = () => {
 	const [walletAddress, setWalletAddress] = useState<string | null>(null);
 	const [loadingWallet, setLoadingWallet] = useState(false);
 	const [currentPlan, setCurrentPlan] = useState<string | null>(null);
+	const [userRole, setUserRole] = useState<string | null>(null);
 
-	// Fetch wallet address from Firestore on modal open
+	// Fetch wallet address and role from Firestore on modal open
 	useEffect(() => {
-		const fetchWallet = async () => {
+		const fetchWalletAndRole = async () => {
 			setLoadingWallet(true);
 			try {
 				const auth = getAuth();
@@ -163,15 +152,17 @@ const GetVerified = () => {
 					const userSnap = await getDoc(userRef);
 					if (userSnap.exists()) {
 						setWalletAddress(userSnap.data().walletAddress || null);
+						setUserRole(userSnap.data().role || null);
 					}
 				}
 			} catch (err) {
 				setWalletAddress(null);
+				setUserRole(null);
 			} finally {
 				setLoadingWallet(false);
 			}
 		};
-		if (showModal) fetchWallet();
+		fetchWalletAndRole();
 	}, [showModal]);
 
 	// Fetch user's current plan from Firestore
@@ -228,7 +219,7 @@ const GetVerified = () => {
 		],
 		annual: [
 			{ price: "$60 / year", cta: "Current Plan" },
-			{ price: "$100 / year", cta: currentPlan === "ProAnnual" ? "Current Plan" : "Subscribe & Go Pro" },
+			{ price: "$50 / year", cta: currentPlan === "ProAnnual" ? "Current Plan" : "Subscribe & Go Pro" },
 			{ price: "$250 / year", cta: currentPlan === "EliteMonthly" || currentPlan === "EliteAnnual" ? "Current Plan" : currentPlan === "ProMonthly" || currentPlan === "ProAnnual" ? "Upgrade to Elite" : "Subscribe to Elite" },
 		],
 	};
@@ -271,6 +262,7 @@ const GetVerified = () => {
 				<X className="h-6 w-6 text-red-500" />
 			</button>
 			<main className="container mx-auto px-4 py-12 flex flex-col items-center">
+
 				<h1 className="text-3xl md:text-4xl font-bold mb-2 text-center mt-12 sm:mt-0">
 					Upgrade to Verified
 				</h1>
@@ -314,11 +306,21 @@ const GetVerified = () => {
 
 					<div className="w-full max-w-4xl overflow-x-auto mt-3 md:mt-0">
 						<div className="flex flex-nowrap gap-6 py-2" style={{ minHeight: 420 }}>
-							{(user?.role === 'company' ? companyTiers : tiers)
-								.filter((_, idx) => !(billingPeriod === 'annual' && idx === 0))
+							{(userRole === 'company'
+								? companyTiers.filter((tier, idx) => {
+									// Remove Elite plan card for company
+									if (tier.name.toLowerCase().includes('elite')) return false;
+									// Remove Basic for annual
+									if (billingPeriod === 'annual' && idx === 0) return false;
+									return true;
+								})
+								: tiers.filter((_, idx) => !(billingPeriod === 'annual' && idx === 0)))
 								.map((tier, idx) => {
 									// For annual, idx offset by 1 (no Basic)
 									const realIdx = billingPeriod === 'annual' ? idx + 1 : idx;
+									const tierList = userRole === 'company' ? companyTiers : tiers;
+									const planDataToUse = userRole === 'company' ? companyPlanData : userPlanData;
+									if (!tierList[realIdx]) return null;
 									const isSelected = selected === realIdx;
 									const isBasic = realIdx === 0 && billingPeriod !== 'annual';
 									const handleModalOpen = () => {
@@ -326,9 +328,7 @@ const GetVerified = () => {
 										setModalPeriod(billingPeriod);
 										setShowModal(true);
 									};
-									// Use companyTiers and companyPlanData for company, tiers and userPlanData for user
-									const planDataToUse = user?.role === 'company' ? companyPlanData : userPlanData;
-									const tierList = user?.role === 'company' ? companyTiers : tiers;
+									// Use user card styling for company cards
 									return (
 										<div
 											key={tierList[realIdx].name}
@@ -353,14 +353,16 @@ const GetVerified = () => {
 											<div className="text-3xl font-extrabold mb-2 text-center">
 												{planDataToUse[billingPeriod][realIdx].price}
 											</div>
-											<ul className="mb-6 space-y-2 text-sm text-slate-200">
-												{tierList[realIdx].features.map((f, i) => (
-													<li key={i} className="flex items-center gap-2">
-														<span className="inline-block w-2 h-2 rounded-full bg-red-500" />
-														{f}
-													</li>
-												))}
-											</ul>
+											{tierList[realIdx].features.length > 0 && (
+												<ul className="mb-6 space-y-2 text-sm text-slate-200">
+													{tierList[realIdx].features.map((f, i) => (
+														<li key={i} className="flex items-center gap-2">
+															<span className="inline-block w-2 h-2 rounded-full bg-red-500" />
+															{f}
+														</li>
+													))}
+												</ul>
+											)}
 											{!isBasic && (
 												<button
 													className={`w-full py-2 rounded-lg font-semibold mt-auto transition-all duration-150 ${
@@ -378,7 +380,7 @@ const GetVerified = () => {
 													className="w-full py-2 rounded-lg font-semibold mt-auto transition-all duration-150 bg-slate-800 text-slate-200 border border-slate-600 opacity-60 cursor-not-allowed"
 													disabled
 												>
-													{planDataToUse[billingPeriod][realIdx].cta}
+													{currentPlan === "ProMonthly" ? "Previous plan" : planDataToUse[billingPeriod][realIdx].cta}
 												</button>
 											)}
 										</div>
