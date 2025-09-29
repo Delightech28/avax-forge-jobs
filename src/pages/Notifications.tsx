@@ -30,19 +30,12 @@ type Notification = {
 };
 
 const Notifications = () => {
-  console.log('Notifications page mounted');
   const { user } = useAuth();
-  console.log('Notifications page mounted');
-  console.log('Notifications page user:', user);
-  console.log('Notifications page mounted');
-  console.log('Notifications page user:', user);
-  console.log('Notifications page user:', user);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-  console.log('Notifications useEffect user:', user);
-  console.log('Notifications useEffect user:', user);
+  // ...existing code...
     if (!user) return;
     const fetchNotifications = async () => {
       setLoading(true);
@@ -216,10 +209,23 @@ const Notifications = () => {
     }
   };
 
-  const markAllAsRead = () => {
-    setNotifications(prev => 
-      prev.map(notification => ({ ...notification, read: true }))
-    );
+  const markAllAsRead = async () => {
+    if (!user) return;
+    try {
+      const { collection, query, where, getDocs, updateDoc, doc } = await import('firebase/firestore');
+      const q = query(
+        collection(db, 'notifications'),
+        where('userId', '==', user.uid),
+        where('read', '==', false)
+      );
+      const snap = await getDocs(q);
+      const batchUpdates = snap.docs.map(d => updateDoc(doc(db, 'notifications', d.id), { read: true }));
+      await Promise.all(batchUpdates);
+      // Update local state
+      setNotifications(prev => prev.map(notification => ({ ...notification, read: true })));
+    } catch (e) {
+      // Optionally handle error
+    }
   };
 
   // Removed delete per requirements
@@ -389,7 +395,15 @@ const Notifications = () => {
           {/* Helper: only show preferences to verified users */}
           {
             (() => {
-              const isVerifiedUser = (u: any) => {
+              interface VerifiedUser {
+                isVerified?: boolean;
+                is_verified?: boolean;
+                verified?: boolean | string;
+                verifiedLevel?: string;
+                verified_plan?: string;
+                role?: string;
+              }
+              const isVerifiedUser = (u: VerifiedUser | boolean | undefined) => {
                 if (!u) return false;
                 const verifiedPlans = ['ProMonthly', 'ProAnnual', 'EliteMonthly', 'EliteAnnual', 'Pro', 'Elite'];
                 // Various possible fields used across the app

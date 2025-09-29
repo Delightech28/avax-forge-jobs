@@ -8,12 +8,12 @@ import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { toast } from "sonner";
 
 const Blog = () => {
-  const blogPosts = [
+  const blogPosts = useMemo(() => [
     {
       id: 1,
       title: "The Future of Web3 Employment: Trends to Watch in 2024",
       excerpt: "Discover the latest trends shaping the Web3 job market and how blockchain technology is revolutionizing traditional employment.",
-      author: "AVAX Forge Team",
+      author: "Talent Hire Team",
       date: "January 15, 2024",
       category: "Industry Trends",
       readTime: "5 min read",
@@ -61,17 +61,17 @@ const Blog = () => {
     },
     {
       id: 6,
-      title: "Avalanche Ecosystem: Job Opportunities and Growth",
-      excerpt: "An overview of the Avalanche blockchain ecosystem and the job opportunities available for developers and professionals.",
-      author: "AVAX Forge Team",
+  title: "Base Ecosystem: Job Opportunities and Growth",
+  excerpt: "An overview of the Base blockchain ecosystem and the job opportunities available for developers and professionals.",
+      author: "Talent Hire Team",
       date: "January 3, 2024",
-      category: "Avalanche",
+  category: "Base",
       readTime: "6 min read",
       featured: false
     }
-  ];
+  ], []);
 
-  const categories = ["All", "Industry Trends", "Career Tips", "Development", "DeFi", "Remote Work", "Avalanche"];
+  const categories = ["All", "Industry Trends", "Career Tips", "Development", "DeFi", "Remote Work", "Base"];
   const [activeCategory, setActiveCategory] = useState<string>("All");
   const [email, setEmail] = useState<string>("");
 

@@ -5,7 +5,7 @@ const Features = () => {
     {
       icon: Shield,
       title: "Verified Employers",
-      description: "All employers must verify with 0.05 AVAX, ensuring legitimate job postings and reducing spam."
+      description: "All employers must verify with 0.05 BASE, ensuring legitimate job postings and reducing spam."
     },
     {
       icon: Zap,
@@ -42,7 +42,7 @@ const Features = () => {
       <div className="container mx-auto px-4 relative z-10">
         <div className="text-center mb-16">
           <h2 className="text-3xl md:text-4xl font-bold mb-4">
-            Why Choose <span className="gradient-text">AVAX Forge Jobs</span>?
+            Why Choose <span className="gradient-text">Talent Hire</span>?
           </h2>
           <p className="text-foreground/70 text-lg max-w-3xl mx-auto">
             Experience the future of job searching with blockchain technology, verified employers, 

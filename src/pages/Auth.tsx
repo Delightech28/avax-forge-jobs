@@ -42,18 +42,13 @@ const Auth = () => {
   const [resetMessage, setResetMessage] = useState('');
 
   useEffect(() => {
-    console.log('Auth useEffect - user:', user, 'loading:', loading);
-    
     if (user && !loading) {
-      console.log('User authenticated, redirecting...');
       // Check if there's a redirect URL in the URL params
       const urlParams = new URLSearchParams(window.location.search);
       const redirectTo = urlParams.get('redirectTo');
       if (redirectTo) {
-        console.log('Redirecting to:', redirectTo);
         navigate(redirectTo);
       } else {
-        console.log('Redirecting to home');
         navigate('/');
       }
     }
@@ -188,7 +183,7 @@ const Auth = () => {
              return {
          label: 'Company Name',
          icon: <Briefcase className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />,
-         placeholder: 'Avax Forge Jobs'
+         placeholder: 'Talent Hire'
        };
     }
   };
@@ -217,7 +212,7 @@ const Auth = () => {
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1 text-center">
           <CardTitle className="text-2xl font-bold">
-            Welcome to AVAX Forge Jobs
+            Welcome to Talent Hire
           </CardTitle>
           <CardDescription>
             Connect your wallet or sign in to access the platform

@@ -14,7 +14,7 @@ const AboutUs = () => {
         <div className="text-center mb-16">
           <div className="inline-flex items-center px-4 py-2 rounded-full bg-primary/10 border border-primary/20 mb-8 animate-slide-up">
             <Shield className="h-4 w-4 text-primary mr-2" />
-            <span className="text-sm font-medium">About AVAX Forge Jobs</span>
+            <span className="text-sm font-medium">About Talent Hire</span>
           </div>
           
           <h1 className="text-4xl md:text-6xl font-bold mb-6 animate-slide-up" style={{ animationDelay: '0.2s' }}>
@@ -24,7 +24,7 @@ const AboutUs = () => {
           
           <p className="text-xl text-foreground/80 max-w-3xl mx-auto leading-relaxed animate-slide-up" style={{ animationDelay: '0.4s' }}>
             We're revolutionizing how talent connects with opportunities in the decentralized world. 
-            Built on Avalanche blockchain, we provide secure, transparent, and efficient job matching.
+            Built on Base blockchain, we provide secure, transparent, and efficient job matching.
           </p>
         </div>
 
@@ -79,7 +79,7 @@ const AboutUs = () => {
               </CardHeader>
               <CardContent>
                 <p className="text-foreground/70">
-                  Built on Avalanche blockchain for maximum security and transparency
+                  Built on Base blockchain for maximum security and transparency
                 </p>
               </CardContent>
             </Card>
@@ -205,7 +205,7 @@ const AboutUs = () => {
               </h3>
               <p className="text-foreground/70 mb-6 max-w-2xl mx-auto">
                 Whether you're looking for your next Web3 opportunity or seeking top talent 
-                for your blockchain project, AVAX Forge Jobs is here to help.
+                for your blockchain project, Talent Hire is here to help.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <a 

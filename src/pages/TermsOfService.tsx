@@ -23,7 +23,7 @@ const TermsOfService = () => {
           </h1>
           
           <p className="text-xl text-foreground/80 max-w-3xl mx-auto leading-relaxed animate-slide-up" style={{ animationDelay: '0.4s' }}>
-            Please read these terms carefully before using AVAX Forge Jobs. 
+            Please read these terms carefully before using Talent Hire. 
             By using our platform, you agree to be bound by these terms and conditions.
           </p>
           
@@ -42,8 +42,8 @@ const TermsOfService = () => {
           </CardHeader>
           <CardContent>
             <p className="text-foreground/80 leading-relaxed mb-4">
-              These Terms of Service ("Terms") govern your use of AVAX Forge Jobs ("Service," "Platform," or "we"), 
-              operated by AVAX Forge Jobs ("Company," "we," or "us"). By accessing or using our Service, you agree 
+              These Terms of Service ("Terms") govern your use of Talent Hire ("Service," "Platform," or "we"), 
+              operated by Talent Hire ("Company," "we," or "us"). By accessing or using our Service, you agree 
               to be bound by these Terms.
             </p>
             <p className="text-foreground/80 leading-relaxed">
@@ -64,7 +64,7 @@ const TermsOfService = () => {
           <CardContent>
             <div className="space-y-4">
               <p className="text-foreground/80 leading-relaxed">
-                AVAX Forge Jobs is a Web3 job platform that connects job seekers with blockchain and 
+                Talent Hire is a Web3 job platform that connects job seekers with blockchain and 
                 decentralized technology opportunities. Our services include:
               </p>
               
@@ -226,7 +226,7 @@ const TermsOfService = () => {
             <div className="space-y-4">
               <p className="text-foreground/80 leading-relaxed">
                 Our platform and its original content, features, and functionality are owned by 
-                AVAX Forge Jobs and are protected by international copyright, trademark, patent, 
+                Talent Hire and are protected by international copyright, trademark, patent, 
                 trade secret, and other intellectual property laws.
               </p>
               
@@ -305,10 +305,10 @@ const TermsOfService = () => {
           <CardContent className="text-center">
             <div className="space-y-4">
               <p className="text-foreground/80">
-                <strong>Email:</strong> legal@avaxforgejobs.com
+                <strong>Email:</strong> legal@talenthire.com
               </p>
               <p className="text-foreground/80">
-                <strong>Legal Team:</strong> AVAX Forge Jobs Legal Department
+                <strong>Legal Team:</strong> Talent Hire Legal Department
               </p>
               <p className="text-foreground/80">
                 <strong>Response Time:</strong> We aim to respond to legal inquiries within 72 hours

@@ -42,7 +42,7 @@ const PrivacyPolicy = () => {
           </CardHeader>
           <CardContent>
             <p className="text-foreground/80 leading-relaxed mb-4">
-              This Privacy Policy describes how AVAX Forge Jobs ("we," "us," or "our") collects, 
+              This Privacy Policy describes how Talent Hire ("we," "us," or "our") collects, 
               uses, and protects your personal information when you use our platform. By using 
               our services, you agree to the collection and use of information in accordance with this policy.
             </p>
@@ -264,7 +264,7 @@ const PrivacyPolicy = () => {
                 <strong>Email:</strong> privacy@avaxforgejobs.com
               </p>
               <p className="text-foreground/80">
-                <strong>Address:</strong> AVAX Forge Jobs Privacy Team
+                <strong>Address:</strong> Talent Hire Privacy Team
               </p>
               <p className="text-foreground/80">
                 <strong>Response Time:</strong> We aim to respond to all privacy-related inquiries within 48 hours

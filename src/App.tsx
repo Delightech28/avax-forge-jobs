@@ -1,3 +1,5 @@
+import ManageJobs from "./pages/ManageJobs";
+import EditJob from "./pages/EditJob";
 import React from "react";
 import { BrowserRouter as Router, Routes, Route, useLocation } from "react-router-dom";
 import { Toaster } from "sonner";
@@ -62,7 +64,9 @@ function App() {
         <Route path="/billing" element={<Billing />} />
         <Route path="/view-applicants" element={<ViewApplicants />} />
         <Route path="/user-profile/:userId" element={<UserProfile />} />
-        <Route path="/community" element={<Community />} />
+            <Route path="/community" element={<Community />} />
+      <Route path="/manage-jobs" element={<ManageJobs />} />
+      <Route path="/edit-job/:jobId" element={<EditJob />} />
       </Routes>
       <Toaster />
     </Router>

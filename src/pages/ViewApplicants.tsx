@@ -59,7 +59,6 @@ const ViewApplicants = () => {
 
   const fetchApplicants = async (jobId: string) => {
     setLoadingApplicants(true);
-    console.log('Checking applicants for jobId:', jobId);
     // Fetch all users
     const usersSnapshot = await getDocs(collection(db, 'users'));
     const allUsers = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -71,7 +70,6 @@ const ViewApplicants = () => {
         applicants.push(user);
       }
     }
-    console.log('Applicants found:', applicants);
     setApplicants(applicants);
     setLoadingApplicants(false);
   };

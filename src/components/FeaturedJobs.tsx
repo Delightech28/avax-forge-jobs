@@ -17,8 +17,8 @@ const FeaturedJobs = () => {
       salary: "$120k - $180k",
       postedAt: "2 days ago",
       isVerified: true,
-      tags: ["Solidity", "Web3", "DeFi", "Avalanche"],
-      description: "Join our team building the next generation of DeFi protocols on Avalanche. Looking for experienced Solidity developers."
+      tags: ["Solidity", "Web3", "DeFi", "Base"],
+      description: "Join our team building the next generation of DeFi protocols on Base. Looking for experienced Solidity developers."
     },
     {
       id: "2",

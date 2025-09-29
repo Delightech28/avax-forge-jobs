@@ -138,9 +138,7 @@ const Jobs = () => {
       setJobs(filtered);
     } catch (error) {
       console.error("Error fetching jobs:", error);
-      if (error instanceof Error && error.message.includes('Missing or insufficient permissions')) {
-        console.log('No jobs found or permissions issue - this is normal for new installations');
-      } else {
+      if (!(error instanceof Error && error.message.includes('Missing or insufficient permissions'))) {
         toast.error("Failed to fetch jobs");
       }
     } finally {

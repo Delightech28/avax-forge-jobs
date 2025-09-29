@@ -187,7 +187,6 @@ const JobDetail = () => {
       });
       // Send in-app notification to company
       const companyId = job.companyId || (job.companies && job.companies.id);
-      console.log('[Apply] companyId for notification (companyId|company_id|posted_by|companies.id):', companyId);
       if (companyId) {
         try {
           await setDoc(doc(collection(db, 'notifications')), {
@@ -200,7 +199,6 @@ const JobDetail = () => {
             message: `You have a new application for your job: ${job.title}`,
             read: false,
           });
-          console.log('[Apply] Notification written for userId:', companyId);
         } catch (notifErr) {
           console.error('[Apply] Error writing notification:', notifErr);
         }

@@ -31,7 +31,7 @@ const Hero = () => {
           {/* Badge */}
           <div className="inline-flex items-center px-4 py-2 rounded-full bg-primary/10 border border-primary/20 mb-8 animate-slide-up">
             <Shield className="h-4 w-4 text-primary mr-2" />
-            <span className="text-sm font-medium">Powered by Avalanche Blockchain</span>
+            <span className="text-sm font-medium">Powered by Base Blockchain</span>
           </div>
 
           {/* Main Heading */}
@@ -43,7 +43,7 @@ const Hero = () => {
           {/* Subheading */}
           <p className="text-xl md:text-2xl text-foreground/80 mb-12 max-w-3xl mx-auto leading-relaxed animate-slide-up" style={{ animationDelay: '0.4s' }}>
             Connect with verified employers and discover opportunities in the decentralized world. 
-            Secure, transparent, and built on Avalanche.
+            Secure, transparent, and built on Base.
           </p>
 
           {/* CTA Buttons */}

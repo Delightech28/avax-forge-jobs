@@ -62,29 +62,24 @@ const Messages = () => {
       // Fetch participant info for each conversation robustly
       const info: Record<string, { name: string; avatar?: string }> = {};
       await Promise.all(convList.map(async (conv) => {
-        const participants = (conv as any).participants || [];
+        const participants: string[] = (conv as Conversation & { participants: string[] }).participants || [];
         const otherId = participants.find((pid: string) => pid !== user.id);
-        console.log('[DEBUG] Conversation', conv.id, 'participants:', participants, 'otherId:', otherId);
         if (otherId) {
           // Try users, then companies
           let docSnap = await getDoc(doc(db, 'users', otherId));
           let data;
           if (docSnap.exists()) {
             data = docSnap.data();
-            console.log('[DEBUG] User doc found for', otherId, data);
           } else {
             docSnap = await getDoc(doc(db, 'companies', otherId));
             if (docSnap.exists()) {
               data = docSnap.data();
-              console.log('[DEBUG] Company doc found for', otherId, data);
-            } else {
-              console.warn('[DEBUG] No user/company doc found for', otherId);
             }
           }
           if (data) {
             // Only use displayName or name, never email
             // If companyName exists and is not empty, use it; otherwise use fullName/displayName/name
-            let displayName = (data.companyName && data.companyName.trim() !== '')
+            const displayName = (data.companyName && data.companyName.trim() !== '')
               ? data.companyName
               : (data.fullName || data.displayName || data.name || 'Unknown');
             info[conv.id] = {
@@ -98,12 +93,12 @@ const Messages = () => {
           info[conv.id] = { name: 'Unknown', avatar: undefined };
         }
       }));
-      console.log('[DEBUG] Final participantInfo:', info);
+  // ...existing code...
       setParticipantInfo(info);
 
       // If ?to= is present, try to find or create a conversation with that user
       if (toUserId && toUserId !== user.id) {
-        let found = convList.find(c => Array.isArray((c as any).participants) && (c as any).participants.includes(toUserId));
+        let found = convList.find(c => Array.isArray((c as Conversation & { participants: string[] }).participants) && (c as Conversation & { participants: string[] }).participants.includes(toUserId));
         if (!found) {
           // Create new conversation doc
           const newConvRef = await addDoc(collection(db, 'conversations'), {
@@ -145,7 +140,6 @@ const Messages = () => {
       };
     });
     return () => unsubscribe();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, location.search]);
 
   const filteredConversations = conversations.filter(c => {
@@ -200,7 +194,6 @@ const Messages = () => {
         read: false,
       };
       const msgResult = await addDoc(msgRef, messageData);
-      console.log('[DEBUG] Message sent', messageData, 'msgId:', msgResult.id);
       // Update conversation lastMessage and updatedAt
       await updateDoc(doc(db, 'conversations', convId), {
         lastMessage: composerText.trim(),

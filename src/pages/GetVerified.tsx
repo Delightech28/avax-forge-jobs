@@ -178,7 +178,6 @@ const GetVerified = () => {
 					if (userSnap.exists()) {
 						const plan = userSnap.data().verified || null;
 						setCurrentPlan(plan);
-						console.log('User current plan from Firestore:', plan);
 					}
 				}
 			} catch (err) {

@@ -216,7 +216,7 @@ export const Community = () => {
           likes: (data.likes || 1) - 1,
           likedBy: arrayRemove(user.uid || user.id),
         };
-        console.log("[Like] Unlike payload:", updatePayload);
+  // ...existing code...
         await updateDoc(postRef, updatePayload);
         setLikedPosts(prev => prev.filter(id => id !== postId));
       } else {
@@ -224,7 +224,7 @@ export const Community = () => {
           likes: (data.likes || 0) + 1,
           likedBy: arrayUnion(user.uid || user.id),
         };
-        console.log("[Like] Like payload:", updatePayload);
+  // ...existing code...
         await updateDoc(postRef, updatePayload);
         setShowLikeEmoji(e => ({ ...e, [postId]: true }));
         setTimeout(() => {
@@ -291,7 +291,7 @@ export const Community = () => {
       const updatePayload = {
         replies: arrayUnion(newReply),
       };
-      console.log("[Reply] Reply payload:", updatePayload);
+  // ...existing code...
       await updateDoc(postRef, updatePayload);
       setReplyInput("");
       // Refetch posts to update UI (no shuffle)

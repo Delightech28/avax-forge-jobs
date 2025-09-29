@@ -27,7 +27,7 @@ const Footer = () => {
           {/* Company Info */}
           <div className="space-y-4">
             <div className="flex items-center space-x-2">
-              <h3 className="text-xl font-bold gradient-text">AVAX Forge Jobs</h3>
+              <h3 className="text-xl font-bold gradient-text">Talent Hire</h3>
               </div>
             <p className="text-foreground/70 text-sm leading-relaxed">
               The future of Web3 employment. Connect with verified employers and discover 
@@ -161,12 +161,12 @@ const Footer = () => {
               <Link to="/terms" className="hover:text-foreground transition-colors">
                 Terms of Service
               </Link>
-              <span>© 2025 AVAX Forge Jobs. All rights reserved.</span>
+              <span>© 2025 Talent Hire. All rights reserved.</span>
             </div>
             
             <div className="flex items-center space-x-2 text-sm text-foreground/70">
               <Shield className="h-4 w-4" />
-              <span>Built on Avalanche Blockchain</span>
+              <span>Built on Base Blockchain</span>
             </div>
           </div>
         </div>

@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-// Extend Window type for avalanche property
+// Extend Window type for base property
 declare global {
   interface Window {
-    avalanche?: unknown;
+  base?: unknown;
   }
 }
 // Using Firebase instead of Express API
@@ -66,18 +66,18 @@ const PostJob = () => {
     if (!pendingJobData) return;
     type EthereumProvider = {
       isMetaMask?: boolean;
-      isAvalanche?: boolean;
+  isBase?: boolean;
       [key: string]: unknown;
     };
     let provider: EthereumProvider | null = null;
     if (wallet === "metamask" && window.ethereum && window.ethereum.isMetaMask) {
       provider = window.ethereum;
-    } else if (wallet === "core" && window.avalanche) {
-      provider = window.avalanche as EthereumProvider;
+    } else if (wallet === "core" && window.base) {
+      provider = window.base as EthereumProvider;
     } else if (
       wallet === "core" &&
       window.ethereum &&
-      (window.ethereum as { isAvalanche?: boolean }).isAvalanche
+      (window.ethereum as { isBase?: boolean }).isBase
     ) {
       provider = window.ethereum;
     } else {
@@ -181,9 +181,16 @@ const PostJob = () => {
         [key: string]: unknown;
       }
       const userData = userSnap.data() as UserData;
-      console.log('[PostJob] preflight', { uid: user.id, roleFromDoc: userData?.role, userDocPath: `users/${user.id}` });
+  // ...existing code...
       if (userData.role !== 'company') {
         toast.error('Only verified companies can post jobs.');
+        setSubmitting(false);
+        return;
+      }
+      // Prevent non-verified (Basic) companies from posting more than 2 jobs
+      const verifiedPlans = ["ProMonthly", "EliteMonthly", "ProAnnual", "EliteAnnual"];
+      if (!verifiedPlans.includes(userData.verified || "") && typeof userData.postedjob === 'number' && userData.postedjob >= 2) {
+        toast.error('You have reached your monthly limit of 2 job postings. Upgrade to Pro to post more jobs.');
         setSubmitting(false);
         return;
       }
@@ -508,11 +515,17 @@ const PostJob = () => {
                     <Input
                       id="salaryMin"
                       type="number"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
                       value={formData.salary_min}
-                      onChange={(e) => handleInputChange("salary_min", e.target.value)}
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/[^0-9]/g, "");
+                        handleInputChange("salary_min", val);
+                      }}
                       placeholder="50000"
-                      className="h-12"
+                      className="h-12 no-spinner"
                       required
+                      style={{ MozAppearance: 'textfield' }}
                     />
                   </div>
                   <div className="space-y-2">
@@ -520,11 +533,17 @@ const PostJob = () => {
                     <Input
                       id="salaryMax"
                       type="number"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
                       value={formData.salary_max}
-                      onChange={(e) => handleInputChange("salary_max", e.target.value)}
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/[^0-9]/g, "");
+                        handleInputChange("salary_max", val);
+                      }}
                       placeholder="80000"
-                      className="h-12"
+                      className="h-12 no-spinner"
                       required
+                      style={{ MozAppearance: 'textfield' }}
                     />
                   </div>
                   <div className="space-y-2">
@@ -565,7 +584,7 @@ const PostJob = () => {
                       id="tokenCompensation"
                       value={formData.token_symbol}
                       onChange={(e) => handleInputChange("token_symbol", e.target.value)}
-                      placeholder="e.g. AVAX"
+                      placeholder="e.g. BASE"
                     />
                   </div>
                 </div>

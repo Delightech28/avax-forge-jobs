@@ -5,22 +5,20 @@ import { getStorage, type FirebaseStorage } from 'firebase/storage';
 
 // TEMPORARY: Hardcoded Firebase config to bypass env variable issues
 const firebaseConfig = {
-  apiKey: "AIzaSyAItxB-jOUvk76SaBl_d2c9HkmlTko090A",
-  authDomain: "avax-forge-jobs.firebaseapp.com",
-  projectId: "avax-forge-jobs",
-  storageBucket: "avax-forge-jobs.appspot.com",
-  messagingSenderId: "1008222365608",
-  appId: "1:1008222365608:web:44ac63e1c45ad03000df9d",
-  measurementId: "G-2M3281WZDM"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
 };
 
-console.log('🔧 Using hardcoded Firebase config');
-console.log('✅ Firebase config loaded successfully');
 
 let app: FirebaseApp;
 try {
   app = initializeApp(firebaseConfig);
-  console.log('✅ Firebase initialized successfully');
+  // Firebase initialized successfully
 } catch (e: unknown) {
   if (e instanceof Error) {
     console.error('❌ Failed to initialize Firebase app:', e.message);
