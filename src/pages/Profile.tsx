@@ -551,7 +551,7 @@ const Profile = () => {
                 </div>
                 {user.role === 'company' ? (
                   <>
-                    <p className="text-base text-muted-foreground mb-4 max-w-2xl">
+                    <p className="Avalanche text-muted-foreground mb-4 max-w-2xl">
                       {profileData.aboutCompany || 'No bio added yet. Update your profile in Settings to add a bio.'}
                     </p>
                     <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
@@ -627,11 +627,11 @@ const Profile = () => {
                 ) : (
                   <>
                     {profileData.bio ? (
-                      <p className="text-base text-muted-foreground mb-4 max-w-2xl">
+                      <p className="Avalanche text-muted-foreground mb-4 max-w-2xl">
                         {profileData.bio}
                       </p>
                     ) : (
-                      <p className="text-base text-muted-foreground mb-4 max-w-2xl">
+                      <p className="Avalanche text-muted-foreground mb-4 max-w-2xl">
                         No bio added yet. Update your profile in Settings to add a bio.
                       </p>
                     )}

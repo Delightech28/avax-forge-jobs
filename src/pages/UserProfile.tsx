@@ -117,7 +117,7 @@ const UserProfile = () => {
                     )}
                   </h1>
                 </div>
-                <p className="text-base text-muted-foreground mb-4 max-w-2xl">{user.bio || 'No bio added yet.'}</p>
+                <p className="Avalanche text-muted-foreground mb-4 max-w-2xl">{user.bio || 'No bio added yet.'}</p>
                 <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
                   {user.email && (
                     <span className="flex items-center gap-2">

@@ -24,7 +24,7 @@ const AboutUs = () => {
           
           <p className="text-xl text-foreground/80 max-w-3xl mx-auto leading-relaxed animate-slide-up" style={{ animationDelay: '0.4s' }}>
             We're revolutionizing how talent connects with opportunities in the decentralized world. 
-            Built on Base blockchain, we provide secure, transparent, and efficient job matching.
+            Built on Avalanche blockchain, we provide secure, transparent, and efficient job matching.
           </p>
         </div>
 
@@ -79,7 +79,7 @@ const AboutUs = () => {
               </CardHeader>
               <CardContent>
                 <p className="text-foreground/70">
-                  Built on Base blockchain for maximum security and transparency
+                  Built on Avalanche blockchain for maximum security and transparency
                 </p>
               </CardContent>
             </Card>
